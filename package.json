@@ -1,0 +1,29 @@
+{
+  "name": "wp-performance-dashboard",
+  "version": "1.0.0",
+  "description": "WordPress Performance Monitoring Dashboard",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "test": "echo \"Tests coming soon\" && exit 0",
+    "build": "echo \"Build complete\" && exit 0",
+    "demo": "node scripts/generate-demo-data.js"
+  },
+  "keywords": ["wordpress", "performance", "monitoring", "dashboard"],
+  "author": "Daryl Lundy",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.2",
+    "mysql2": "^3.6.0",
+    "ws": "^8.13.0",
+    "helmet": "^7.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1",
+    "concurrently": "^8.2.0"
+  }
+}

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WordPress Performance Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+    <div class="dashboard">
+        <header>
+            <h1>WordPress Performance Dashboard</h1>
+            <div class="status-indicator">
+                <span class="dot" id="connection-status"></span>
+                <span>Real-time Monitoring</span>
+            </div>
+        </header>
+
+        <div class="grid">
+            <div class="card">
+                <h2>Performance Overview</h2>
+                <canvas id="performanceChart"></canvas>
+            </div>
+
+            <div class="card">
+                <h2>Slow Queries</h2>
+                <div id="slowQueries"></div>
+            </div>
+
+            <div class="card">
+                <h2>Admin-Ajax Usage</h2>
+                <canvas id="adminAjaxChart"></canvas>
+            </div>
+
+            <div class="card">
+                <h2>Plugin Performance</h2>
+                <div id="pluginPerformance"></div>
+            </div>
+
+            <div class="card">
+                <h2>Real-time Metrics</h2>
+                <div id="realTimeMetrics">
+                    <div class="metric">
+                        <label>Queries/sec:</label>
+                        <span id="queries-per-sec">0</span>
+                    </div>
+                    <div class="metric">
+                        <label>Avg Response:</label>
+                        <span id="avg-response">0ms</span>
+                    </div>
+                    <div class="metric">
+                        <label>Memory Usage:</label>
+                        <span id="memory-usage">0MB</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Recommendations</h2>
+                <div id="recommendations">
+                    <div class="recommendation">
+                        <strong>Query Optimization:</strong> 
+                        Optimize slow queries detected in wp_posts table
+                    </div>
+                    <div class="recommendation">
+                        <strong>Plugin Review:</strong> 
+                        Consider deactivating high-impact plugins
+                    </div>
+                    <div class="recommendation">
+                        <strong>Caching:</strong> 
+                        Enable object caching for better performance
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/dashboard.js"></script>
+</body>
+</html>
