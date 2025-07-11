@@ -18,3 +18,4 @@ secrets/
 *.pem
 *.key
 *.crt
+.history
