@@ -1,317 +1,315 @@
-# WP Performance Dashboard
+# 🚀 WordPress Performance Dashboard
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
-![Node.js](https://img.shields.io/badge/node.js-18+-green.svg)
-![Express](https://img.shields.io/badge/express-4.18+-red.svg)
-![Socket.IO](https://img.shields.io/badge/socket.io-4.7+-orange.svg)
-![License](https://img.shields.io/badge/license-MIT-brightgreen.svg)
-![Status](https://img.shields.io/badge/status-production--ready-success.svg)
+A comprehensive, real-time WordPress performance monitoring dashboard built with modern web technologies. This dashboard provides detailed insights into WordPress performance metrics, database queries, plugin impact, and system health - designed in the style of professional monitoring tools like Grafana and Netdata.
 
-**Real-time WordPress performance monitoring dashboard with advanced analytics and WebSocket updates.**
+## ✨ Features
 
-Built for enterprise hosting environments and performance-critical WordPress sites.
+### 📊 Real-time Performance Monitoring
+- **Live Metrics**: Real-time tracking of queries per second, response times, and memory usage
+- **Interactive Gauges**: Visual gauges for key performance indicators
+- **Time Series Charts**: Historical performance data with interactive time range selection
+- **WebSocket Updates**: Real-time data streaming every 5 seconds
 
-## 🚀 Features
+### 🔍 Advanced Analytics
+- **Slow Query Analysis**: Detailed breakdown of slow database queries with execution times
+- **Plugin Performance Matrix**: Impact scoring for all active WordPress plugins
+- **Admin-Ajax Monitoring**: Track admin-ajax calls and their performance impact
+- **System Health Overview**: CPU, memory, and disk usage monitoring
 
-### Performance Monitoring
-- **Real-time MySQL query analysis** with slow query detection
-- **Admin-ajax usage tracking** and optimization recommendations
-- **Plugin impact analysis** with performance scoring
-- **Server resource monitoring** (CPU, memory, disk I/O)
-- **Cache hit ratio analysis** for optimization insights
+### 🎨 Modern UI/UX
+- **Grafana/Netdata Inspired**: Professional dark theme with modern card-based layout
+- **Interactive Controls**: Metric toggles, time range selectors, and refresh controls
+- **Responsive Design**: Works perfectly on desktop, tablet, and mobile devices
+- **Smooth Animations**: Elegant transitions and hover effects
 
-### Advanced Analytics
-- **Query performance trends** with historical data
-- **Plugin dependency mapping** for conflict detection
-- **User session impact analysis** on performance
-- **Database optimization recommendations**
-- **Automated performance scoring** with improvement suggestions
+### 🛠️ Technical Features
+- **Database Integration**: Direct MySQL connection for real-time data
+- **RESTful API**: Comprehensive API endpoints for all dashboard data
+- **Error Handling**: Robust error handling with user-friendly notifications
+- **Performance Optimized**: Efficient database queries and caching strategies
 
-### Real-time Updates
-- **WebSocket-powered dashboard** for live monitoring
-- **Instant alerts** for performance degradation
-- **Real-time query execution visualization**
-- **Live plugin performance metrics**
-- **Dynamic threshold adjustment** based on traffic patterns
+## 🏗️ Architecture
 
-## 📊 Dashboard Preview
+### Backend
+- **Node.js/Express**: High-performance web server
+- **MySQL**: Database for storing performance metrics
+- **Socket.IO**: Real-time bidirectional communication
+- **Connection Pooling**: Efficient database connection management
 
-![Dashboard Demo](./demo/dashboard-demo.gif)
+### Frontend
+- **Vanilla JavaScript**: No heavy frameworks, optimized for performance
+- **Chart.js**: Advanced charting library for data visualization
+- **CSS Grid/Flexbox**: Modern CSS layout techniques
+- **WebSocket Integration**: Real-time data updates
 
-*Real-time performance monitoring with interactive charts and alerts*
-
-## 🔧 Installation
+## � Quick Start
 
 ### Prerequisites
-- Node.js 18+
-- MySQL 5.7+ or MariaDB 10.3+
-- WordPress 5.0+ with Performance monitoring enabled
+- Node.js 16+ and npm
+- MySQL 8.0+
+- Docker and Docker Compose (optional)
 
-### Quick Start
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/your-username/wp-performance-dashboard.git
+   cd wp-performance-dashboard
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Set up environment variables**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your database credentials
+   ```
+
+4. **Generate demo data**
+   ```bash
+   npm run seed:sample-data
+   ```
+
+5. **Start the application**
+   ```bash
+   ./start.sh
+   ```
+
+### Docker Setup
+
+For quick deployment using Docker:
+
 ```bash
-# Clone and install
-git clone <repository>
-cd wp-performance-dashboard
-npm install
+# Start with automatic port detection
+./start.sh
 
-# Configure environment
-cp .env.example .env
-# Edit .env with your database credentials
-
-# Start the dashboard
-npm start
+# Or manually with docker-compose
+docker-compose up
 ```
 
-### Environment Configuration
+## � API Endpoints
+
+### Performance Metrics
+- `GET /api/metrics` - Retrieve performance metrics
+- `GET /api/slow-queries` - Get slow query analysis
+- `GET /api/admin-ajax` - Admin-ajax usage statistics
+- `GET /api/plugins` - Plugin performance data
+- `GET /api/system-health` - System health overview
+- `GET /api/realtime-metrics` - Real-time metrics snapshot
+
+### Query Parameters
+- `?limit=N` - Limit number of results
+- `?timeRange=1h|6h|24h|7d` - Filter by time range
+
+## 🎯 Dashboard Components
+
+### 1. System Health Overview
+- **Slow Queries Counter**: Number of slow queries in the last hour
+- **Average Response Time**: Current system response time
+- **Active Plugins**: Count of active WordPress plugins
+- **System Status**: Overall health indicator
+
+### 2. Performance Metrics Chart
+- **Interactive Time Series**: Toggle between response time, memory usage, and queries per second
+- **Time Range Selection**: View data for last 1 hour, 6 hours, 24 hours, or 7 days
+- **Smooth Animations**: Elegant chart transitions and hover effects
+
+### 3. Real-time Gauges
+- **Queries per Second**: Live QPS monitoring with visual gauge
+- **Response Time**: Current response time with threshold indicators
+- **Memory Usage**: Real-time memory consumption tracking
+
+### 4. Slow Query Analysis
+- **Query Details**: Full query text with execution times
+- **Performance Impact**: Rows examined and source file information
+- **Syntax Highlighting**: Monospace font for better query readability
+
+### 5. Plugin Performance Matrix
+- **Impact Scoring**: Color-coded impact scores (0-100)
+- **Resource Usage**: Memory consumption and query count per plugin
+- **Load Time Analysis**: Plugin loading performance metrics
+
+### 6. Admin-Ajax Monitoring
+- **Call Frequency**: Most frequently called admin-ajax actions
+- **Response Times**: Average response time per action
+- **Performance Impact**: Total time spent on each action
+
+### 7. Intelligent Recommendations
+- **Query Optimization**: Suggestions for slow query improvements
+- **Plugin Management**: Recommendations for high-impact plugins
+- **Caching Strategies**: Performance optimization suggestions
+
+## 🔧 Configuration
+
+### Environment Variables
 ```env
 # Database Configuration
 DB_HOST=localhost
-DB_USER=wordpress_user
-DB_PASSWORD=your_password
-DB_NAME=wordpress_db
+DB_USER=root
+DB_PASSWORD=password
+DB_NAME=wordpress_performance
 
-# Dashboard Settings
+# Server Configuration
 PORT=3000
 NODE_ENV=production
-WEBSOCKET_ENABLED=true
 
-# Monitoring Thresholds
-SLOW_QUERY_THRESHOLD=2000
-HIGH_MEMORY_THRESHOLD=80
-ALERT_EMAIL=admin@yoursite.com
+# Monitoring Configuration
+REFRESH_INTERVAL=5000
+MAX_SLOW_QUERIES=20
 ```
 
-## 🎯 Usage
+### Docker Configuration
+The project includes Docker configuration for easy deployment:
+- `Dockerfile` - Application container
+- `docker-compose.yml` - Full stack deployment
+- `start.sh` - Automatic port detection and startup
 
-### Starting the Dashboard
-```bash
-# Development mode with hot reload
-npm run dev
+## 📊 Database Schema
 
-# Production mode
-npm start
-
-# With PM2 for production
-npm install -g pm2
-pm2 start ecosystem.config.js
+### Performance Metrics Table
+```sql
+CREATE TABLE performance_metrics (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  query_type VARCHAR(50),
+  avg_execution_time FLOAT,
+  total_queries INT,
+  slow_queries INT,
+  queries_per_second FLOAT,
+  avg_response_time FLOAT,
+  memory_usage FLOAT,
+  timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 ```
 
-### Accessing the Interface
-- **Dashboard:** http://localhost:3000
-- **API Endpoints:** http://localhost:3000/api
-- **WebSocket:** ws://localhost:3000/socket.io
-
-## 📡 API Endpoints
-
-### Performance Metrics
-```bash
-# Get current performance overview
-GET /api/performance/overview
-
-# Get slow queries (last 24 hours)
-GET /api/performance/slow-queries
-
-# Get plugin performance analysis
-GET /api/performance/plugins
-
-# Get real-time metrics
-GET /api/performance/realtime
+### Slow Queries Table
+```sql
+CREATE TABLE slow_queries (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  query_text TEXT,
+  execution_time FLOAT,
+  rows_examined INT,
+  source_file VARCHAR(255),
+  timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 ```
 
-### Query Analysis
-```bash
-# Analyze specific query
-POST /api/analyze/query
-Content-Type: application/json
-{
-  "query": "SELECT * FROM wp_posts WHERE post_status = 'publish'",
-  "execution_time": 1.2
-}
+## 🚀 WordPress Integration
 
-# Get query optimization suggestions
-GET /api/analyze/suggestions/:query_id
-```
+### Direct Database Connection
+Connect directly to your WordPress database for real-time monitoring:
 
-## 🔍 Performance Analysis Features
-
-### Slow Query Detection
 ```javascript
-// Automatic detection of queries exceeding thresholds
-const slowQueries = await queryAnalyzer.detectSlow({
-  threshold: 2000, // 2 seconds
-  timeRange: '24h',
-  includeStackTrace: true
-});
-
-// Get optimization recommendations
-const suggestions = await queryOptimizer.getSuggestions(slowQueries);
+// Example configuration for WordPress database
+const wpDbConfig = {
+  host: 'your-wordpress-db-host',
+  user: 'wp_user',
+  password: 'wp_password',
+  database: 'wordpress_db'
+};
 ```
 
-### Plugin Impact Analysis
-```javascript
-// Analyze plugin performance impact
-const pluginAnalysis = await pluginAnalyzer.analyzeImpact({
-  includeInactive: false,
-  sortBy: 'performance_score',
-  timeRange: '7d'
-});
+### Plugin Integration
+For enhanced monitoring, install the companion WordPress plugin:
+1. Tracks real-time query performance
+2. Monitors plugin resource usage
+3. Logs admin-ajax calls
+4. Provides detailed performance metrics
 
-// Get plugin conflict detection
-const conflicts = await pluginAnalyzer.detectConflicts();
+## 📈 Performance Metrics
+
+### Key Performance Indicators
+- **Response Time**: Average HTTP response time
+- **Query Performance**: Database query execution times
+- **Memory Usage**: PHP memory consumption
+- **Plugin Impact**: Resource usage by WordPress plugins
+- **Cache Hit Ratio**: Effectiveness of caching layers
+
+### Monitoring Thresholds
+- **Slow Query**: > 1000ms execution time
+- **High Memory**: > 256MB PHP memory usage
+- **Heavy Plugin**: > 70 impact score
+- **Poor Response**: > 2000ms response time
+
+## 🛡️ Security Considerations
+
+### Database Security
+- Use dedicated monitoring database user
+- Implement read-only permissions where possible
+- Enable SSL/TLS for database connections
+- Regular security updates
+
+### Application Security
+- Input validation and sanitization
+- Rate limiting on API endpoints
+- CORS configuration for production
+- Environment variable protection
+
+## 🔍 Troubleshooting
+
+### Common Issues
+
+1. **Database Connection Failed**
+   - Check database credentials
+   - Verify MySQL service is running
+   - Ensure network connectivity
+
+2. **No Real-time Data**
+   - Verify WebSocket connection
+   - Check browser console for errors
+   - Ensure proper port configuration
+
+3. **Missing Charts**
+   - Confirm Chart.js is loaded
+   - Check for JavaScript errors
+   - Verify canvas element exists
+
+## � Development
+
+### Project Structure
+```
+wp-performance-dashboard/
+├── public/              # Frontend assets
+│   ├── index.html      # Main dashboard page
+│   ├── css/            # Stylesheets
+│   └── js/             # JavaScript files
+├── scripts/            # Utility scripts
+├── server.js           # Main server file
+├── package.json        # Dependencies
+└── README.md          # Documentation
 ```
 
-### Real-time Monitoring
-```javascript
-// WebSocket connection for real-time updates
-const socket = io('http://localhost:3000');
+### Contributing
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
 
-socket.on('performance_update', (data) => {
-  updateDashboard(data);
-});
+## � License
 
-socket.on('slow_query_alert', (alert) => {
-  showAlert(alert);
-});
-```
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🎨 Dashboard Components
+## 🙋‍♂️ Support
 
-### Main Dashboard
-- **Performance Overview** - Key metrics and trends
-- **Query Timeline** - Real-time query execution visualization
-- **Resource Usage** - Server performance metrics
-- **Alert Center** - Active alerts and notifications
+For support and questions:
+- Create an issue on GitHub
+- Check the documentation
+- Review the troubleshooting guide
 
-### Advanced Analytics
-- **Query Performance Trends** - Historical analysis
-- **Plugin Impact Scoring** - Performance rankings
-- **Database Optimization** - Automated recommendations
-- **User Session Analysis** - Performance per user segment
+## 🎯 Future Enhancements
 
-## 🔧 Technical Architecture
-
-### Backend Stack
-- **Node.js 18** - Runtime environment
-- **Express.js** - Web framework
-- **Socket.IO** - Real-time communication
-- **MySQL2** - Database connectivity
-- **Redis** - Caching and session management
-
-### Frontend Stack
-- **Vanilla JavaScript** - No framework dependencies
-- **Chart.js** - Interactive performance charts
-- **Socket.IO Client** - Real-time updates
-- **Bootstrap 5** - Responsive UI components
-
-## 🚀 Deployment
-
-### Docker Deployment
-```bash
-# Build the image
-docker build -t wp-performance-dashboard .
-
-# Run with environment variables
-docker run -p 3000:3000 \
-  -e DB_HOST=your_db_host \
-  -e DB_USER=your_db_user \
-  -e DB_PASSWORD=your_db_password \
-  wp-performance-dashboard
-```
-
-### Production Deployment
-```bash
-# Install PM2 for process management
-npm install -g pm2
-
-# Start with PM2
-pm2 start ecosystem.config.js
-
-# Setup nginx reverse proxy
-sudo cp nginx.conf /etc/nginx/sites-available/wp-dashboard
-sudo nginx -t && sudo systemctl reload nginx
-```
-
-## 📈 Performance Achievements
-
-### Demonstrated Results
-- **73% query time reduction** through optimization recommendations
-- **Real-time alerting** with <100ms notification latency
-- **Scalable architecture** supporting 10,000+ concurrent connections
-- **Advanced analytics** with 7-day historical analysis
-- **Plugin conflict detection** with 95% accuracy rate
-
-### Optimization Capabilities
-- **Automated index recommendations** for slow queries
-- **Plugin impact scoring** with detailed performance analysis
-- **Cache optimization suggestions** based on usage patterns
-- **Database query profiling** with execution plan analysis
-- **Real-time performance monitoring** with customizable thresholds
-
-## 🔧 Development
-
-### Local Development
-```bash
-# Install dependencies
-npm install
-
-# Run in development mode
-npm run dev
-
-# Run tests
-npm test
-
-# Run linting
-npm run lint
-```
-
-### Testing
-```bash
-# Run all tests
-npm test
-
-# Run performance tests
-npm run test:performance
-
-# Run integration tests
-npm run test:integration
-
-# Generate coverage report
-npm run test:coverage
-```
-
-## 📊 Demo
-
-### Live Demo
-Access the live demo at: [Dashboard Demo](./demo/dashboard-demo.gif)
-
-### Sample Data
-```bash
-# Load sample performance data
-npm run seed:sample-data
-
-# Generate test queries
-npm run test:generate-queries
-
-# Start with demo mode
-npm run demo
-```
-
-## 🎯 Pressable Integration
-
-### Enterprise Features
-- **Multi-site monitoring** for WordPress networks
-- **Advanced caching analysis** for Pressable's infrastructure
-- **Performance optimization** specifically for managed WordPress
-- **Hosting provider integration** with Pressable's monitoring stack
-
-### Professional Support
-Built specifically for enterprise WordPress hosting environments with:
-- **24/7 monitoring capabilities**
-- **Advanced alerting systems**
-- **Performance optimization recommendations**
-- **Scalable architecture for high-traffic sites**
+- [ ] WordPress plugin for enhanced integration
+- [ ] Alert system with email notifications
+- [ ] Multi-site monitoring support
+- [ ] Advanced filtering and search
+- [ ] Performance benchmarking
+- [ ] Custom dashboard layouts
+- [ ] Export functionality for reports
+- [ ] Integration with external monitoring services
 
 ---
 
-**Built by Daryl Lundy for Pressable Performance Engineer Application**  
-*Professional WordPress performance monitoring and optimization dashboard*
+**Built with ❤️ for WordPress Performance Optimization**

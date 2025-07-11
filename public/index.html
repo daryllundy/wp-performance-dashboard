@@ -6,71 +6,160 @@
     <title>WordPress Performance Dashboard</title>
     <link rel="stylesheet" href="css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
     <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
     <div class="dashboard">
         <header>
-            <h1>WordPress Performance Dashboard</h1>
-            <div class="status-indicator">
-                <span class="dot" id="connection-status"></span>
-                <span>Real-time Monitoring</span>
+            <div class="header-left">
+                <h1>🚀 WordPress Performance Dashboard</h1>
+                <div class="status-indicator">
+                    <span class="dot" id="connection-status"></span>
+                    <span>Real-time Monitoring</span>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="time-range-selector">
+                    <label>Time Range:</label>
+                    <select id="timeRange">
+                        <option value="1h">Last 1 Hour</option>
+                        <option value="6h">Last 6 Hours</option>
+                        <option value="24h">Last 24 Hours</option>
+                        <option value="7d">Last 7 Days</option>
+                    </select>
+                </div>
+                <button id="refreshBtn" class="refresh-btn">↻ Refresh</button>
             </div>
         </header>
 
+        <!-- System Health Overview -->
+        <div class="health-overview">
+            <div class="health-card">
+                <div class="health-icon">🔍</div>
+                <div class="health-content">
+                    <div class="health-value" id="health-slow-queries">0</div>
+                    <div class="health-label">Slow Queries (1h)</div>
+                </div>
+            </div>
+            <div class="health-card">
+                <div class="health-icon">⚡</div>
+                <div class="health-content">
+                    <div class="health-value" id="health-avg-response">0ms</div>
+                    <div class="health-label">Avg Response Time</div>
+                </div>
+            </div>
+            <div class="health-card">
+                <div class="health-icon">🔌</div>
+                <div class="health-content">
+                    <div class="health-value" id="health-active-plugins">0</div>
+                    <div class="health-label">Active Plugins</div>
+                </div>
+            </div>
+            <div class="health-card">
+                <div class="health-icon">📊</div>
+                <div class="health-content">
+                    <div class="health-value" id="health-status">Healthy</div>
+                    <div class="health-label">System Status</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Dashboard Grid -->
         <div class="grid">
-            <div class="card">
-                <h2>Performance Overview</h2>
+            <!-- Performance Overview Chart -->
+            <div class="card large">
+                <div class="card-header">
+                    <h2>📈 Performance Metrics</h2>
+                    <div class="card-controls">
+                        <button class="metric-toggle active" data-metric="response_time">Response Time</button>
+                        <button class="metric-toggle" data-metric="memory_usage">Memory Usage</button>
+                        <button class="metric-toggle" data-metric="queries_per_second">Queries/sec</button>
+                    </div>
+                </div>
                 <canvas id="performanceChart"></canvas>
             </div>
 
+            <!-- Real-time Gauges -->
             <div class="card">
-                <h2>Slow Queries</h2>
-                <div id="slowQueries"></div>
-            </div>
-
-            <div class="card">
-                <h2>Admin-Ajax Usage</h2>
-                <canvas id="adminAjaxChart"></canvas>
-            </div>
-
-            <div class="card">
-                <h2>Plugin Performance</h2>
-                <div id="pluginPerformance"></div>
-            </div>
-
-            <div class="card">
-                <h2>Real-time Metrics</h2>
-                <div id="realTimeMetrics">
-                    <div class="metric">
-                        <label>Queries/sec:</label>
-                        <span id="queries-per-sec">0</span>
+                <div class="card-header">
+                    <h2>⚡ Real-time Metrics</h2>
+                </div>
+                <div class="gauges-container">
+                    <div class="gauge-card">
+                        <canvas id="qpsGauge"></canvas>
+                        <div class="gauge-label">Queries/sec</div>
+                        <div class="gauge-value" id="qps-value">0</div>
                     </div>
-                    <div class="metric">
-                        <label>Avg Response:</label>
-                        <span id="avg-response">0ms</span>
+                    <div class="gauge-card">
+                        <canvas id="responseGauge"></canvas>
+                        <div class="gauge-label">Response Time</div>
+                        <div class="gauge-value" id="response-value">0ms</div>
                     </div>
-                    <div class="metric">
-                        <label>Memory Usage:</label>
-                        <span id="memory-usage">0MB</span>
+                    <div class="gauge-card">
+                        <canvas id="memoryGauge"></canvas>
+                        <div class="gauge-label">Memory Usage</div>
+                        <div class="gauge-value" id="memory-value">0MB</div>
                     </div>
                 </div>
             </div>
 
+            <!-- Slow Queries Analysis -->
             <div class="card">
-                <h2>Recommendations</h2>
-                <div id="recommendations">
-                    <div class="recommendation">
-                        <strong>Query Optimization:</strong> 
-                        Optimize slow queries detected in wp_posts table
+                <div class="card-header">
+                    <h2>🐌 Slow Queries</h2>
+                    <div class="card-controls">
+                        <span class="query-count" id="slow-query-count">0 queries</span>
                     </div>
-                    <div class="recommendation">
-                        <strong>Plugin Review:</strong> 
-                        Consider deactivating high-impact plugins
+                </div>
+                <div id="slowQueries" class="scrollable-content"></div>
+            </div>
+
+            <!-- Admin-Ajax Monitoring -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>🔄 Admin-Ajax Usage</h2>
+                </div>
+                <canvas id="adminAjaxChart"></canvas>
+            </div>
+
+            <!-- Plugin Performance Matrix -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>🔌 Plugin Performance</h2>
+                    <div class="card-controls">
+                        <span class="plugin-count" id="plugin-count">0 plugins</span>
                     </div>
-                    <div class="recommendation">
-                        <strong>Caching:</strong> 
-                        Enable object caching for better performance
+                </div>
+                <div id="pluginPerformance" class="scrollable-content"></div>
+            </div>
+
+            <!-- Performance Recommendations -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>💡 Recommendations</h2>
+                </div>
+                <div id="recommendations" class="scrollable-content">
+                    <div class="recommendation warning">
+                        <div class="recommendation-icon">⚠️</div>
+                        <div class="recommendation-content">
+                            <strong>Query Optimization:</strong>
+                            <p>Several slow queries detected in wp_posts table. Consider adding indexes or optimizing WHERE clauses.</p>
+                        </div>
+                    </div>
+                    <div class="recommendation info">
+                        <div class="recommendation-icon">ℹ️</div>
+                        <div class="recommendation-content">
+                            <strong>Plugin Review:</strong>
+                            <p>High-impact plugins detected. Review plugin necessity and consider alternatives.</p>
+                        </div>
+                    </div>
+                    <div class="recommendation success">
+                        <div class="recommendation-icon">✅</div>
+                        <div class="recommendation-content">
+                            <strong>Caching:</strong>
+                            <p>Object caching is recommended for better performance. Consider Redis or Memcached.</p>
+                        </div>
                     </div>
                 </div>
             </div>
