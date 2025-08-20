@@ -6,7 +6,7 @@
     "start": "node server.js",
     "seed:sample-data": "node scripts/generate-demo-data.js",
     "test": "jest",
-    "test:docker": "jest --testPathPattern=docker"
+    "test:docker": "jest --testPathPatterns=docker"
   },
   "dependencies": {
     "cors": "^2.8.5",

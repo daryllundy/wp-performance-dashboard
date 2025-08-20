@@ -363,7 +363,12 @@ For enhanced monitoring, install the companion WordPress plugin:
    - Confirm Chart.js is loaded (check network tab)
    - Check for JavaScript errors in browser console
    - Verify canvas elements exist in DOM
-4. **Docker Issues**
+4. **Punycode Deprecation Warning**
+
+   - This is a harmless warning from Node.js about the deprecated `punycode` module
+   - The application will continue to work normally
+   - Warning can be safely ignored: `(node:XXXX) [DEP0040] DeprecationWarning: The \`punycode\` module is deprecated. Please use a userland alternative instead.`
+5. **Docker Issues**
 
    - Ensure Docker daemon is running
    - Check port conflicts with `docker ps`
@@ -382,7 +387,7 @@ wp-performance-dashboard/
 ├── scripts/            # Utility scripts
 │   └── generate-demo-data.js # Demo data generator
 ├── src/                # Source files
-│   └── server.js       # Main server (symlinked to root)
+│   └── server.js       # Alternative server implementation
 ├── tests/              # Test files
 │   ├── docker-build.test.js
 │   └── docker-functionality.test.js
@@ -397,17 +402,17 @@ wp-performance-dashboard/
 ├── DOCKER-SETUP.md    # Docker setup documentation
 ├── jest.config.js     # Test configuration
 ├── package.json       # Dependencies and scripts
-├── server.js          # Main server file (symlink)
+├── server.js          # Main server file
 └── README.md          # Documentation
 ```
 
 ### Available Scripts
 
 ```bash
-npm start              # Start the server
-npm run seed:sample-data # Generate demo data
-npm test               # Run tests
-npm test:docker        # Run Docker-specific tests
+npm start              # Start the WordPress Performance Dashboard server on port 3000
+npm run seed:sample-data # Generate demo data (requires database connection)
+npm test               # Run all tests (requires Docker Compose setup)
+npm run test:docker    # Run Docker-specific tests (requires Docker Compose setup)
 ```
 
 ### Contributing
