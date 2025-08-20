@@ -3,25 +3,65 @@ const http = require('http');
 const socketIo = require('socket.io');
 const mysql = require('mysql2/promise');
 const path = require('path');
+const fetch = require('node-fetch');
 require('dotenv').config();
 
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 
-// Database configuration
-const dbConfig = {
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || 'password',
-  database: process.env.DB_NAME || 'wordpress_performance',
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
-};
+// Configuration
+const useExternalWP = !!process.env.WP_API_URL;
+const wpApiUrl = process.env.WP_API_URL;
+const wpApiUsername = process.env.WP_API_USERNAME;
+const wpApiPassword = process.env.WP_API_PASSWORD;
 
-// Create database connection pool
-const pool = mysql.createPool(dbConfig);
+// Database configuration (only if not using external WordPress)
+let pool = null;
+if (!useExternalWP) {
+  const dbConfig = {
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || 'password',
+    database: process.env.DB_NAME || 'wordpress_performance',
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
+  };
+  pool = mysql.createPool(dbConfig);
+}
+
+// WordPress API helper functions
+async function fetchFromWPApi(endpoint, method = 'GET', data = null) {
+  if (!wpApiUrl) {
+    throw new Error('WordPress API URL not configured');
+  }
+
+  const url = `${wpApiUrl}${endpoint}`;
+  const options = {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+    }
+  };
+
+  // Add basic auth if credentials are provided
+  if (wpApiUsername && wpApiPassword) {
+    const auth = Buffer.from(`${wpApiUsername}:${wpApiPassword}`).toString('base64');
+    options.headers.Authorization = `Basic ${auth}`;
+  }
+
+  if (data && (method === 'POST' || method === 'PUT')) {
+    options.body = JSON.stringify(data);
+  }
+
+  const response = await fetch(url, options);
+  if (!response.ok) {
+    throw new Error(`WP API request failed: ${response.status} ${response.statusText}`);
+  }
+
+  return response.json();
+}
 
 // Middleware
 app.use(express.json());
@@ -33,11 +73,17 @@ app.get('/api/metrics', async (req, res) => {
     const timeRange = req.query.timeRange || '1h';
     const limit = req.query.limit || 50;
 
-    const [rows] = await pool.execute(
-      'SELECT * FROM performance_metrics ORDER BY timestamp DESC LIMIT ?',
-      [parseInt(limit)]
-    );
-    res.json(rows);
+    if (useExternalWP) {
+      // Use WordPress API for external WordPress
+      const data = await fetchFromWPApi(`/wp-json/wp-performance-dashboard/v1/metrics?timeRange=${timeRange}&limit=${limit}`);
+      res.json(data);
+    } else {
+      // Use direct database query for local setup
+      const [rows] = await pool.execute(
+        `SELECT * FROM performance_metrics ORDER BY timestamp DESC LIMIT ${parseInt(limit)}`
+      );
+      res.json(rows);
+    }
   } catch (error) {
     console.error('Error fetching metrics:', error);
     res.status(500).json({ error: 'Failed to fetch metrics' });
@@ -47,11 +93,19 @@ app.get('/api/metrics', async (req, res) => {
 app.get('/api/slow-queries', async (req, res) => {
   try {
     const limit = req.query.limit || 20;
-    const [rows] = await pool.execute(
-      'SELECT * FROM slow_queries ORDER BY execution_time DESC LIMIT ?',
-      [parseInt(limit)]
-    );
-    res.json(rows);
+
+    if (useExternalWP) {
+      // Use WordPress API for external WordPress
+      const data = await fetchFromWPApi(`/wp-json/wp-performance-dashboard/v1/slow-queries?limit=${limit}`);
+      res.json(data);
+    } else {
+      // Use direct database query for local setup
+      const [rows] = await pool.execute(
+        'SELECT * FROM slow_queries ORDER BY execution_time DESC LIMIT ?',
+        [parseInt(limit)]
+      );
+      res.json(rows);
+    }
   } catch (error) {
     console.error('Error fetching slow queries:', error);
     res.status(500).json({ error: 'Failed to fetch slow queries' });
@@ -60,10 +114,17 @@ app.get('/api/slow-queries', async (req, res) => {
 
 app.get('/api/admin-ajax', async (req, res) => {
   try {
-    const [rows] = await pool.execute(
-      'SELECT * FROM admin_ajax_calls ORDER BY call_count DESC LIMIT 20'
-    );
-    res.json(rows);
+    if (useExternalWP) {
+      // Use WordPress API for external WordPress
+      const data = await fetchFromWPApi('/wp-json/wp-performance-dashboard/v1/admin-ajax');
+      res.json(data);
+    } else {
+      // Use direct database query for local setup
+      const [rows] = await pool.execute(
+        'SELECT * FROM admin_ajax_calls ORDER BY call_count DESC LIMIT 20'
+      );
+      res.json(rows);
+    }
   } catch (error) {
     console.error('Error fetching admin-ajax data:', error);
     res.status(500).json({ error: 'Failed to fetch admin-ajax data' });
@@ -72,10 +133,17 @@ app.get('/api/admin-ajax', async (req, res) => {
 
 app.get('/api/plugins', async (req, res) => {
   try {
-    const [rows] = await pool.execute(
-      'SELECT * FROM plugin_performance ORDER BY impact_score DESC'
-    );
-    res.json(rows);
+    if (useExternalWP) {
+      // Use WordPress API for external WordPress
+      const data = await fetchFromWPApi('/wp-json/wp-performance-dashboard/v1/plugins');
+      res.json(data);
+    } else {
+      // Use direct database query for local setup
+      const [rows] = await pool.execute(
+        'SELECT * FROM plugin_performance ORDER BY impact_score DESC'
+      );
+      res.json(rows);
+    }
   } catch (error) {
     console.error('Error fetching plugin data:', error);
     res.status(500).json({ error: 'Failed to fetch plugin data' });
@@ -85,10 +153,17 @@ app.get('/api/plugins', async (req, res) => {
 // Real-time metrics endpoint
 app.get('/api/realtime-metrics', async (req, res) => {
   try {
-    const [metrics] = await pool.execute(
-      'SELECT AVG(queries_per_second) as avg_qps, AVG(avg_response_time) as avg_response, AVG(memory_usage) as avg_memory FROM performance_metrics WHERE timestamp > DATE_SUB(NOW(), INTERVAL 5 MINUTE)'
-    );
-    res.json(metrics[0] || { avg_qps: 0, avg_response: 0, avg_memory: 0 });
+    if (useExternalWP) {
+      // Use WordPress API for external WordPress
+      const data = await fetchFromWPApi('/wp-json/wp-performance-dashboard/v1/realtime-metrics');
+      res.json(data);
+    } else {
+      // Use direct database query for local setup
+      const [metrics] = await pool.execute(
+        'SELECT AVG(queries_per_second) as avg_qps, AVG(avg_response_time) as avg_response, AVG(memory_usage) as avg_memory FROM performance_metrics WHERE timestamp > DATE_SUB(NOW(), INTERVAL 5 MINUTE)'
+      );
+      res.json(metrics[0] || { avg_qps: 0, avg_response: 0, avg_memory: 0 });
+    }
   } catch (error) {
     console.error('Error fetching realtime metrics:', error);
     res.status(500).json({ error: 'Failed to fetch realtime metrics' });
@@ -98,16 +173,23 @@ app.get('/api/realtime-metrics', async (req, res) => {
 // System health endpoint
 app.get('/api/system-health', async (req, res) => {
   try {
-    const [queryCount] = await pool.execute('SELECT COUNT(*) as total FROM slow_queries WHERE timestamp > DATE_SUB(NOW(), INTERVAL 1 HOUR)');
-    const [pluginCount] = await pool.execute('SELECT COUNT(*) as total FROM plugin_performance WHERE status = "active"');
-    const [avgResponse] = await pool.execute('SELECT AVG(avg_response_time) as avg FROM performance_metrics WHERE timestamp > DATE_SUB(NOW(), INTERVAL 1 HOUR)');
+    if (useExternalWP) {
+      // Use WordPress API for external WordPress
+      const data = await fetchFromWPApi('/wp-json/wp-performance-dashboard/v1/system-health');
+      res.json(data);
+    } else {
+      // Use direct database query for local setup
+      const [queryCount] = await pool.execute('SELECT COUNT(*) as total FROM slow_queries WHERE timestamp > DATE_SUB(NOW(), INTERVAL 1 HOUR)');
+      const [pluginCount] = await pool.execute('SELECT COUNT(*) as total FROM plugin_performance WHERE status = "active"');
+      const [avgResponse] = await pool.execute('SELECT AVG(avg_response_time) as avg FROM performance_metrics WHERE timestamp > DATE_SUB(NOW(), INTERVAL 1 HOUR)');
 
-    res.json({
-      slow_queries_1h: queryCount[0].total,
-      active_plugins: pluginCount[0].total,
-      avg_response_time: avgResponse[0].avg || 0,
-      status: 'healthy'
-    });
+      res.json({
+        slow_queries_1h: queryCount[0].total,
+        active_plugins: pluginCount[0].total,
+        avg_response_time: avgResponse[0].avg || 0,
+        status: 'healthy'
+      });
+    }
   } catch (error) {
     console.error('Error fetching system health:', error);
     res.status(500).json({ error: 'Failed to fetch system health' });
@@ -126,18 +208,32 @@ io.on('connection', (socket) => {
 // Real-time data broadcasting
 setInterval(async () => {
   try {
-    const [metrics] = await pool.execute(
-      'SELECT * FROM performance_metrics ORDER BY timestamp DESC LIMIT 1'
-    );
+    if (useExternalWP) {
+      // Use WordPress API for external WordPress
+      const data = await fetchFromWPApi('/wp-json/wp-performance-dashboard/v1/realtime-metrics');
+      if (data && data.queries_per_second !== undefined) {
+        io.emit('real-time-metrics', {
+          queries_per_second: data.queries_per_second,
+          avg_response_time: data.avg_response_time,
+          memory_usage: data.memory_usage,
+          timestamp: data.timestamp || new Date().toISOString()
+        });
+      }
+    } else {
+      // Use direct database query for local setup
+      const [metrics] = await pool.execute(
+        'SELECT * FROM performance_metrics ORDER BY timestamp DESC LIMIT 1'
+      );
 
-    if (metrics.length > 0) {
-      const latestMetrics = metrics[0];
-      io.emit('real-time-metrics', {
-        queries_per_second: latestMetrics.queries_per_second,
-        avg_response_time: latestMetrics.avg_response_time,
-        memory_usage: latestMetrics.memory_usage,
-        timestamp: latestMetrics.timestamp
-      });
+      if (metrics.length > 0) {
+        const latestMetrics = metrics[0];
+        io.emit('real-time-metrics', {
+          queries_per_second: latestMetrics.queries_per_second,
+          avg_response_time: latestMetrics.avg_response_time,
+          memory_usage: latestMetrics.memory_usage,
+          timestamp: latestMetrics.timestamp
+        });
+      }
     }
   } catch (error) {
     console.error('Error broadcasting real-time data:', error);
