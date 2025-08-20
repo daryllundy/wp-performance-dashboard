@@ -5,6 +5,7 @@ services:
       - "${FREE_PORT}:3000"
     depends_on:
       - db
+      - wordpress
     environment:
       - DB_HOST=db
       - DB_USER=root
@@ -13,6 +14,21 @@ services:
     volumes:
       - .:/app
       - /app/node_modules
+
+  wordpress:
+    image: wordpress:latest
+    ports:
+      - "8080:80"
+    depends_on:
+      - db
+    environment:
+      - WORDPRESS_DB_HOST=db:3306
+      - WORDPRESS_DB_USER=root
+      - WORDPRESS_DB_PASSWORD=password
+      - WORDPRESS_DB_NAME=wordpress_performance
+    volumes:
+      - wordpress_data:/var/www/html
+      - ./wp-content:/var/www/html/wp-content
 
   db:
     image: mysql:8.0
@@ -23,6 +39,8 @@ services:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password
 
 volumes:
   mysql_data:
+  wordpress_data:
