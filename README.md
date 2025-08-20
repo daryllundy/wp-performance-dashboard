@@ -31,25 +31,33 @@ A comprehensive, real-time WordPress performance monitoring dashboard built with
 ## 🏗️ Architecture
 
 ### Backend
-- **Node.js/Express**: High-performance web server
-- **MySQL**: Database for storing performance metrics
-- **Socket.IO**: Real-time bidirectional communication
-- **Connection Pooling**: Efficient database connection management
+- **Node.js/Express**: High-performance web server with RESTful APIs
+- **MySQL**: Database for storing performance metrics with connection pooling
+- **Socket.IO**: Real-time bidirectional communication (5-second intervals)
+- **Environment Configuration**: .env support for flexible deployment
 
 ### Frontend
 - **Vanilla JavaScript**: No heavy frameworks, optimized for performance
-- **Chart.js**: Advanced charting library for data visualization
-- **CSS Grid/Flexbox**: Modern CSS layout techniques
-- **WebSocket Integration**: Real-time data updates
+- **Chart.js**: Advanced charting library with time series support
+- **CSS Grid/Flexbox**: Modern responsive layout techniques
+- **WebSocket Integration**: Real-time dashboard updates
+- **Modern UI**: Grafana/Netdata-inspired dark theme with smooth animations
 
-## � Quick Start
+### Infrastructure
+- **Docker Support**: Complete containerization with docker-compose
+- **WordPress Integration**: Direct database monitoring capabilities
+- **Demo Data**: Sample data generation for testing and demonstrations
+
+## 🚀 Quick Start
 
 ### Prerequisites
 - Node.js 16+ and npm
 - MySQL 8.0+
 - Docker and Docker Compose (optional)
 
-### Installation
+### Installation Options
+
+#### Option 1: Direct Node.js Setup
 
 1. **Clone the repository**
    ```bash
@@ -68,17 +76,25 @@ A comprehensive, real-time WordPress performance monitoring dashboard built with
    # Edit .env with your database credentials
    ```
 
-4. **Generate demo data**
+4. **Set up database**
+   ```bash
+   # Create the WordPress performance database
+   mysql -u root -p -e "CREATE DATABASE wordpress_performance;"
+   ```
+
+5. **Generate demo data**
    ```bash
    npm run seed:sample-data
    ```
 
-5. **Start the application**
+6. **Start the application**
    ```bash
-   ./start.sh
+   npm start
    ```
 
-### Docker Setup
+The dashboard will be available at: http://localhost:3000
+
+#### Option 2: Docker Setup
 
 For quick deployment using Docker:
 
@@ -87,10 +103,12 @@ For quick deployment using Docker:
 ./start.sh
 
 # Or manually with docker-compose
-docker-compose up
+docker-compose up -d
 ```
 
-## � API Endpoints
+The application will be available on a free port (typically 3000 or next available).
+
+## 📡 API Endpoints
 
 ### Performance Metrics
 - `GET /api/metrics` - Retrieve performance metrics
@@ -164,8 +182,8 @@ MAX_SLOW_QUERIES=20
 ### Docker Configuration
 The project includes Docker configuration for easy deployment:
 - `Dockerfile` - Application container
-- `docker-compose.yml` - Full stack deployment
-- `start.sh` - Automatic port detection and startup
+- `docker-compose.yml` - Full stack deployment with MySQL and WordPress
+- `start.sh` - Automatic port detection and startup script
 
 ## 📊 Database Schema
 
@@ -192,6 +210,19 @@ CREATE TABLE slow_queries (
   execution_time FLOAT,
   rows_examined INT,
   source_file VARCHAR(255),
+  timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### Plugin Performance Table
+```sql
+CREATE TABLE plugin_performance (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  plugin_name VARCHAR(255),
+  impact_score FLOAT,
+  memory_usage FLOAT,
+  query_count INT,
+  status ENUM('active', 'inactive'),
   timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 ```
@@ -252,21 +283,26 @@ For enhanced monitoring, install the companion WordPress plugin:
 ### Common Issues
 
 1. **Database Connection Failed**
-   - Check database credentials
+   - Check database credentials in .env file
    - Verify MySQL service is running
-   - Ensure network connectivity
+   - Ensure network connectivity to database host
 
 2. **No Real-time Data**
-   - Verify WebSocket connection
-   - Check browser console for errors
-   - Ensure proper port configuration
+   - Verify WebSocket connection (check browser console)
+   - Ensure Socket.IO server is running
+   - Check browser network tab for connection errors
 
 3. **Missing Charts**
-   - Confirm Chart.js is loaded
-   - Check for JavaScript errors
-   - Verify canvas element exists
+   - Confirm Chart.js is loaded (check network tab)
+   - Check for JavaScript errors in browser console
+   - Verify canvas elements exist in DOM
 
-## � Development
+4. **Docker Issues**
+   - Ensure Docker daemon is running
+   - Check port conflicts with `docker ps`
+   - Verify docker-compose file syntax
+
+## 🏗️ Development
 
 ### Project Structure
 ```
@@ -276,40 +312,85 @@ wp-performance-dashboard/
 │   ├── css/            # Stylesheets
 │   └── js/             # JavaScript files
 ├── scripts/            # Utility scripts
-├── server.js           # Main server file
-├── package.json        # Dependencies
+│   └── generate-demo-data.js # Demo data generator
+├── src/                # Source files
+│   └── server.js       # Main server (symlinked to root)
+├── tests/              # Test files
+│   ├── docker-build.test.js
+│   └── docker-functionality.test.js
+├── demo/               # Demo assets
+├── docs/               # Documentation
+├── config/             # Configuration files
+├── wp-content/         # WordPress content (themes/plugins)
+├── .env.example        # Environment template
+├── docker-compose.yml  # Docker orchestration
+├── Dockerfile         # Container definition
+├── jest.config.js     # Test configuration
+├── package.json       # Dependencies and scripts
+├── server.js          # Main server file (symlink)
 └── README.md          # Documentation
+```
+
+### Available Scripts
+```bash
+npm start              # Start the server
+npm run seed:sample-data # Generate demo data
+npm test               # Run tests
+npm test:docker        # Run Docker-specific tests
 ```
 
 ### Contributing
 1. Fork the repository
-2. Create a feature branch
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Make your changes
 4. Add tests if applicable
-5. Submit a pull request
+5. Commit your changes (`git commit -m 'Add amazing feature'`)
+6. Push to the branch (`git push origin feature/amazing-feature`)
+7. Open a Pull Request
 
-## � License
+## 📋 Testing
+
+The project includes comprehensive testing:
+
+```bash
+# Run all tests
+npm test
+
+# Run Docker-specific tests
+npm run test:docker
+
+# Generate test coverage
+npm run test:coverage
+```
+
+##  License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🙋‍♂️ Support
 
 For support and questions:
-- Create an issue on GitHub
-- Check the documentation
-- Review the troubleshooting guide
+- **Documentation**: Check this README and the `/docs` folder
+- **Issues**: Create an issue on GitHub
+- **Discussions**: Use GitHub Discussions for questions
+- **Troubleshooting**: Review the troubleshooting section above
 
 ## 🎯 Future Enhancements
 
 - [ ] WordPress plugin for enhanced integration
-- [ ] Alert system with email notifications
+- [ ] Alert system with email/SMS notifications
 - [ ] Multi-site monitoring support
-- [ ] Advanced filtering and search
-- [ ] Performance benchmarking
-- [ ] Custom dashboard layouts
-- [ ] Export functionality for reports
+- [ ] Advanced filtering and search capabilities
+- [ ] Performance benchmarking tools
+- [ ] Custom dashboard layouts and themes
+- [ ] Export functionality for reports (PDF/CSV)
 - [ ] Integration with external monitoring services
+- [ ] Historical data archiving
+- [ ] API rate limiting and authentication
+- [ ] Mobile app companion
 
 ---
 
 **Built with ❤️ for WordPress Performance Optimization**
+
+*Real-time monitoring for WordPress sites, because performance matters.*
