@@ -1,21 +1,63 @@
+# Dependencies & Build Artifacts
 node_modules/
-.env
-.DS_Store
-*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 dist/
 build/
-__pycache__/
-*.pyc
-.venv/
-venv/
-.pytest_cache/
-.coverage
-htmlcov/
-.mypy_cache/
-.tox/
-docker-compose.override.yml
+.nyc_output/
+
+# Environment & Secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 secrets/
 *.pem
 *.key
 *.crt
+
+# IDE & OS Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 .history
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+coverage/
+.mypy_cache/
+.tox/
+jest-coverage/
+
+# Docker & Deployment
+docker-compose.override.yml
+.dockerignore
+Dockerfile.*
+docker/
+
+# WordPress Specific
+wp-content/uploads/
+wp-content/cache/
+wp-content/upgrade/
+wp-content/debug.log
+wp-content/wp-config.php
+
+# Project Specific
+logs/
+*.log
+temp/
+data/
+demo/*.cast.tmp
