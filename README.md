@@ -81,8 +81,9 @@ A comprehensive, real-time WordPress performance monitoring dashboard built with
 3. **Set up environment variables**
 
    ```bash
-   cp .env.example .env
+   cp .env.dashboard.example .env
    # Edit .env with your database credentials
+   # Note: For full stack setup, configure with your local database settings
    ```
 4. **Set up database**
 
@@ -389,7 +390,6 @@ wp-performance-dashboard/
 ├── docs/               # Documentation
 ├── config/             # Configuration files
 ├── wp-content/         # WordPress content (themes/plugins)
-├── .env.example        # Environment template for full stack
 ├── .env.dashboard.example # Environment template for dashboard-only
 ├── docker-compose.full.yml    # Full stack deployment
 ├── docker-compose.dashboard.yml # Dashboard-only deployment
