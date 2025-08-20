@@ -2,6 +2,10 @@
   "name": "wp-performance-dashboard",
   "version": "1.0.0",
   "main": "server.js",
+  "engines": {
+    "node": ">=18.14.0",
+    "npm": ">=6.0.0"
+  },
   "scripts": {
     "start": "node server.js",
     "seed:sample-data": "node scripts/generate-demo-data.js",

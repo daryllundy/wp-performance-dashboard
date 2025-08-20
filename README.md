@@ -59,7 +59,7 @@ A comprehensive, real-time WordPress performance monitoring dashboard built with
 
 ### Prerequisites
 
-- Node.js 16+ and npm
+- Node.js 18+ and npm
 - MySQL 8.0+
 - Docker and Docker Compose (optional)
 
