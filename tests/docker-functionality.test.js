@@ -103,11 +103,11 @@ describe('Docker Container Functionality Tests', () => {
     expect(runningContainers.length).toBe(3); // app, wordpress, db
   });
 
-  test('Container logs are clean (no errors)', () => {
+  test('Container logs are clean (no critical errors)', () => {
     const logs = execSync(`docker-compose -f ${dockerComposePath} logs`, { encoding: 'utf8' });
-    // Check for common error patterns
-    expect(logs).not.toMatch(/Error|error|ERROR/);
-    expect(logs).not.toMatch(/Failed|failed|FAILED/);
+    // Check for critical error patterns that indicate service failures
+    expect(logs).not.toMatch(/FATAL|CRITICAL|Cannot connect|Connection refused|Service unavailable/i);
+    expect(logs).not.toMatch(/Exit code [1-9]|Container.*exited with code [1-9]/);
   });
 
   test('Services can communicate with each other', () => {

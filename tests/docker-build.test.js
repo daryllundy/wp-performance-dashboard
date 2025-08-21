@@ -6,11 +6,11 @@ describe('Docker Container Build Tests', () => {
   const dockerComposePath = path.join(__dirname, '..', 'docker-compose.full.yml');
 
   beforeAll(() => {
-    // Verify docker-compose.yml exists
+    // Verify docker-compose.full.yml exists
     expect(fs.existsSync(dockerComposePath)).toBe(true);
   });
 
-  test('docker-compose.yml is valid', () => {
+  test('docker-compose.full.yml is valid', () => {
     expect(() => {
       execSync(`docker-compose -f ${dockerComposePath} config`, { stdio: 'pipe' });
     }).not.toThrow();
