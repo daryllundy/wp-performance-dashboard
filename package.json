@@ -2,15 +2,21 @@
   "name": "wp-performance-dashboard",
   "version": "1.0.0",
   "main": "server.js",
+  "engines": {
+    "node": ">=18.14.0",
+    "npm": ">=6.0.0"
+  },
   "scripts": {
     "start": "node server.js",
     "seed:sample-data": "node scripts/generate-demo-data.js",
     "test": "jest",
-    "test:docker": "jest --testPathPattern=docker"
+    "test:docker": "jest --testPathPatterns=docker"
   },
   "dependencies": {
+    "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
+    "helmet": "^7.1.0",
     "mysql2": "^3.6.0",
     "node-fetch": "^2.7.0",
     "socket.io": "^4.7.2"
