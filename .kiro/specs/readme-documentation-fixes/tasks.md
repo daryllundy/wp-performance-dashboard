@@ -55,9 +55,16 @@
   - _Requirements: 8.1, 8.2, 8.3, 8.4_
   - **Status**: COMPLETED - Troubleshooting section is comprehensive and accurate
 
-- [ ] 8. Perform comprehensive validation testing
+- [ ] 8. Fix Docker test configuration issues
+
+  - Update test files to use correct docker-compose file names (docker-compose.full.yml instead of docker-compose.yml)
+  - Fix test file paths to reference existing Docker configurations
+  - Update test expectations to match current project structure
+  - _Requirements: 6.1, 6.2, 6.3, 6.4_
+
+- [ ] 9. Perform comprehensive validation testing
   - Test complete setup process using only updated README instructions
   - Verify all file references are accessible and correct
   - Test both Docker deployment methods with updated documentation
-  - Validate all npm scripts execute successfully
+  - Validate all npm scripts execute successfully after test fixes
   - _Requirements: 1.1, 2.1, 3.1, 4.1, 5.1, 6.1, 7.1, 8.1_

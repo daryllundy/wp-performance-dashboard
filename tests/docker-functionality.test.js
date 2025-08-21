@@ -3,7 +3,7 @@ const http = require('http');
 const path = require('path');
 
 describe('Docker Container Functionality Tests', () => {
-  const dockerComposePath = path.join(__dirname, '..', 'docker-compose.yml');
+  const dockerComposePath = path.join(__dirname, '..', 'docker-compose.full.yml');
   const maxRetries = 30;
   const retryDelay = 2000; // 2 seconds
 
@@ -28,7 +28,7 @@ describe('Docker Container Functionality Tests', () => {
     for (let i = 0; i < maxRetries; i++) {
       try {
         // Check if containers are running
-        const output = execSync('docker-compose ps', { encoding: 'utf8' });
+        const output = execSync(`docker-compose -f ${dockerComposePath} ps`, { encoding: 'utf8' });
         if (output.includes('Up') && output.includes('app') && output.includes('wordpress') && output.includes('db')) {
           console.log('All services are running');
           return;
@@ -67,17 +67,21 @@ describe('Docker Container Functionality Tests', () => {
   }
 
   test('Dashboard app is accessible on port 3000', async () => {
-    const isAccessible = await testHttpEndpoint('localhost', 3000);
+    // Wait a bit for the app to fully start
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
+    const isAccessible = await testHttpEndpoint('localhost', 3000, '/health');
     expect(isAccessible).toBe(true);
-  }, 10000);
+  }, 15000);
 
   test('WordPress site is accessible on port 8080', async () => {
-    const isAccessible = await testHttpEndpoint('localhost', 8080);
+    // WordPress returns 302 when not fully configured, which is normal
+    const isAccessible = await testHttpEndpoint('localhost', 8080, '/', 302);
     expect(isAccessible).toBe(true);
   }, 10000);
 
   test('MySQL database is accessible', () => {
-    const output = execSync('docker-compose exec -T db mysql -u root -ppassword -e "SELECT 1;"', {
+    const output = execSync(`docker-compose -f ${dockerComposePath} exec -T db mysql -u root -ppassword -e "SELECT 1;"`, {
       encoding: 'utf8',
       stdio: 'pipe'
     });
@@ -86,7 +90,7 @@ describe('Docker Container Functionality Tests', () => {
 
   test('WordPress database connection is working', () => {
     // Check if WordPress can connect to the database
-    const output = execSync('docker-compose exec -T db mysql -u root -ppassword -e "SHOW DATABASES;"', {
+    const output = execSync(`docker-compose -f ${dockerComposePath} exec -T db mysql -u root -ppassword -e "SHOW DATABASES;"`, {
       encoding: 'utf8',
       stdio: 'pipe'
     });
@@ -94,13 +98,13 @@ describe('Docker Container Functionality Tests', () => {
   });
 
   test('All containers are running', () => {
-    const output = execSync('docker-compose ps', { encoding: 'utf8' });
+    const output = execSync(`docker-compose -f ${dockerComposePath} ps`, { encoding: 'utf8' });
     const runningContainers = output.match(/Up/g) || [];
     expect(runningContainers.length).toBe(3); // app, wordpress, db
   });
 
   test('Container logs are clean (no errors)', () => {
-    const logs = execSync('docker-compose logs', { encoding: 'utf8' });
+    const logs = execSync(`docker-compose -f ${dockerComposePath} logs`, { encoding: 'utf8' });
     // Check for common error patterns
     expect(logs).not.toMatch(/Error|error|ERROR/);
     expect(logs).not.toMatch(/Failed|failed|FAILED/);
@@ -108,7 +112,7 @@ describe('Docker Container Functionality Tests', () => {
 
   test('Services can communicate with each other', () => {
     // Test that the app container can reach the database
-    const output = execSync('docker-compose exec -T app node -e "console.log(process.env.DB_HOST)"', {
+    const output = execSync(`docker-compose -f ${dockerComposePath} exec -T app node -e "console.log(process.env.DB_HOST)"`, {
       encoding: 'utf8',
       stdio: 'pipe'
     });

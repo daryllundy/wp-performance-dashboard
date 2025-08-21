@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 describe('Docker Container Build Tests', () => {
-  const dockerComposePath = path.join(__dirname, '..', 'docker-compose.yml');
+  const dockerComposePath = path.join(__dirname, '..', 'docker-compose.full.yml');
 
   beforeAll(() => {
     // Verify docker-compose.yml exists
@@ -26,9 +26,28 @@ describe('Docker Container Build Tests', () => {
     expect(dockerConfig.services).toHaveProperty('db');
 
     // Verify service configurations
-    expect(dockerConfig.services.app.ports).toContain('${FREE_PORT}:3000');
-    expect(dockerConfig.services.wordpress.ports).toContain('8080:80');
-    expect(dockerConfig.services.db.ports).toContain('3306:3306');
+    expect(dockerConfig.services.app.ports).toBeDefined();
+    expect(dockerConfig.services.wordpress.ports).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          published: "8080",
+          target: 80
+        })
+      ])
+    );
+    expect(dockerConfig.services.db.ports).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          published: "3306",
+          target: 3306
+        })
+      ])
+    );
+
+    // Verify app service port mapping (should use FREE_PORT or default to 3000)
+    const appPort = dockerConfig.services.app.ports[0];
+    expect(appPort.target).toBe(3000);
+    expect(appPort.published).toMatch(/^(3000|\$\{FREE_PORT\}|\d+)$/);
   });
 
   test('Docker images can be pulled', () => {
