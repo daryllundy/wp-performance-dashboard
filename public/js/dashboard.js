@@ -299,62 +299,139 @@ function updateAdminAjaxChart(ajaxData) {
 }
 
 function displaySlowQueries(queries) {
-    const container = document.getElementById('slowQueries');
-    const countElement = document.getElementById('slow-query-count');
+    // Use ContentUpdateManager for proper scroll preservation and cleanup
+    if (window.contentUpdateManager) {
+        window.contentUpdateManager.updateContainer('slowQueries', (data) => {
+            const container = document.getElementById('slowQueries');
+            const countElement = document.getElementById('slow-query-count');
 
-    countElement.textContent = `${queries.length} queries`;
+            countElement.textContent = `${data.length} queries`;
 
-    if (queries.length === 0) {
-        container.innerHTML = '<div class="no-data">No slow queries detected 🎉</div>';
-        return;
+            if (data.length === 0) {
+                container.innerHTML = '<div class="no-data">No slow queries detected 🎉</div>';
+                return;
+            }
+
+            container.innerHTML = data.map(query => `
+                <div class="query-item">
+                    <div class="query-header">
+                        <strong>Query:</strong>
+                        <span class="query-time">${query.execution_time}ms</span>
+                    </div>
+                    <div class="query-text">${query.query_text.substring(0, 150)}${query.query_text.length > 150 ? '...' : ''}</div>
+                    <div class="query-meta">
+                        <span>📊 ${query.rows_examined} rows</span> |
+                        <span>📁 ${query.source_file || 'Unknown'}</span>
+                    </div>
+                </div>
+            `).join('');
+        }, queries, {
+            preserveScroll: true,
+            cleanupRequired: true
+        }).catch(error => {
+            console.error('Error updating slow queries:', error);
+        });
+    } else {
+        // Fallback to original implementation if ContentUpdateManager not available
+        const container = document.getElementById('slowQueries');
+        const countElement = document.getElementById('slow-query-count');
+
+        countElement.textContent = `${queries.length} queries`;
+
+        if (queries.length === 0) {
+            container.innerHTML = '<div class="no-data">No slow queries detected 🎉</div>';
+            return;
+        }
+
+        container.innerHTML = queries.map(query => `
+            <div class="query-item">
+                <div class="query-header">
+                    <strong>Query:</strong>
+                    <span class="query-time">${query.execution_time}ms</span>
+                </div>
+                <div class="query-text">${query.query_text.substring(0, 150)}${query.query_text.length > 150 ? '...' : ''}</div>
+                <div class="query-meta">
+                    <span>📊 ${query.rows_examined} rows</span> |
+                    <span>📁 ${query.source_file || 'Unknown'}</span>
+                </div>
+            </div>
+        `).join('');
     }
-
-    container.innerHTML = queries.map(query => `
-        <div class="query-item">
-            <div class="query-header">
-                <strong>Query:</strong>
-                <span class="query-time">${query.execution_time}ms</span>
-            </div>
-            <div class="query-text">${query.query_text.substring(0, 150)}${query.query_text.length > 150 ? '...' : ''}</div>
-            <div class="query-meta">
-                <span>📊 ${query.rows_examined} rows</span> |
-                <span>📁 ${query.source_file || 'Unknown'}</span>
-            </div>
-        </div>
-    `).join('');
 }
 
 function displayPluginPerformance(plugins) {
-    const container = document.getElementById('pluginPerformance');
-    const countElement = document.getElementById('plugin-count');
+    // Use ContentUpdateManager for proper scroll preservation and cleanup
+    if (window.contentUpdateManager) {
+        window.contentUpdateManager.updateContainer('pluginPerformance', (data) => {
+            const container = document.getElementById('pluginPerformance');
+            const countElement = document.getElementById('plugin-count');
 
-    countElement.textContent = `${plugins.length} plugins`;
+            countElement.textContent = `${data.length} plugins`;
 
-    if (plugins.length === 0) {
-        container.innerHTML = '<div class="no-data">No plugin data available</div>';
-        return;
+            if (data.length === 0) {
+                container.innerHTML = '<div class="no-data">No plugin data available</div>';
+                return;
+            }
+
+            container.innerHTML = data.map(plugin => {
+                const impactColor = plugin.impact_score > 70 ? '#f85149' :
+                                   plugin.impact_score > 40 ? '#f9826c' : '#238636';
+
+                return `
+                    <div class="plugin-item">
+                        <div class="plugin-main">
+                            <strong>${plugin.plugin_name}</strong>
+                            <span class="plugin-impact" style="color: ${impactColor}">
+                                ${plugin.impact_score}/100
+                            </span>
+                        </div>
+                        <div class="plugin-stats">
+                            <span>💾 ${plugin.memory_usage}MB</span>
+                            <span>🔍 ${plugin.query_count} queries</span>
+                            <span>⚡ ${plugin.load_time}ms</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }, plugins, {
+            preserveScroll: true,
+            cleanupRequired: true
+        }).catch(error => {
+            console.error('Error updating plugin performance:', error);
+        });
+    } else {
+        // Fallback to original implementation if ContentUpdateManager not available
+        const container = document.getElementById('pluginPerformance');
+        const countElement = document.getElementById('plugin-count');
+
+        countElement.textContent = `${plugins.length} plugins`;
+
+        if (plugins.length === 0) {
+            container.innerHTML = '<div class="no-data">No plugin data available</div>';
+            return;
+        }
+
+        container.innerHTML = plugins.map(plugin => {
+            const impactColor = plugin.impact_score > 70 ? '#f85149' :
+                               plugin.impact_score > 40 ? '#f9826c' : '#238636';
+
+            return `
+                <div class="plugin-item">
+                    <div class="plugin-main">
+                        <strong>${plugin.plugin_name}</strong>
+                        <span class="plugin-impact" style="color: ${impactColor}">
+                            ${plugin.impact_score}/100
+                        </span>
+                    </div>
+                    <div class="plugin-stats">
+                        <span>💾 ${plugin.memory_usage}MB</span>
+                        <span>🔍 ${plugin.query_count} queries</span>
+                        <span>⚡ ${plugin.load_time}ms</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
     }
-
-    container.innerHTML = plugins.map(plugin => {
-        const impactColor = plugin.impact_score > 70 ? '#f85149' :
-                           plugin.impact_score > 40 ? '#f9826c' : '#238636';
-
-        return `
-            <div class="plugin-item">
-                <div class="plugin-main">
-                    <strong>${plugin.plugin_name}</strong>
-                    <span class="plugin-impact" style="color: ${impactColor}">
-                        ${plugin.impact_score}/100
-                    </span>
-                </div>
-                <div class="plugin-stats">
-                    <span>💾 ${plugin.memory_usage}MB</span>
-                    <span>🔍 ${plugin.query_count} queries</span>
-                    <span>⚡ ${plugin.load_time}ms</span>
-                </div>
-            </div>
-        `;
-    }).join('');
 }
 
 function updateSystemHealth(health) {
