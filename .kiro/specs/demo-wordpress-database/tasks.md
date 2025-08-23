@@ -36,7 +36,7 @@
   - Create admin-ajax call simulation data
   - _Requirements: 2.1, 2.2, 2.4, 4.1, 4.4_
 
-- [ ] 6. Create demo plugin for performance simulation
+- [x] 6. Create demo plugin for performance simulation
 
   - Develop custom WordPress plugin to generate controlled performance scenarios
   - Implement slow query simulation functionality
@@ -44,7 +44,7 @@
   - Add memory usage variation features
   - _Requirements: 2.1, 2.2, 2.3_
 
-- [ ] 7. Set up demo management scripts
+- [-] 7. Set up demo management scripts
 
   - Create shell script for demo environment setup and initialization
   - Implement demo reset functionality to restore original state

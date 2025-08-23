@@ -50,7 +50,7 @@ fi
 
 # Activate demo plugins
 echo "Activating demo plugins..."
-wp plugin activate demo-plugins/performance-simulator --allow-root --path=/var/www/html || echo "Performance simulator plugin not found or already active"
+wp plugin activate performance-simulator --allow-root --path=/var/www/html || echo "Performance simulator plugin not found or already active"
 
 # Set demo theme
 echo "Setting up demo theme..."

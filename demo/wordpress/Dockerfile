@@ -11,9 +11,10 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy initialization script
+# Copy initialization script and demo content
 COPY demo/wordpress/docker-entrypoint-init.sh /usr/local/bin/
 COPY demo/wordpress/init-demo-content.php /tmp/
+COPY demo/wordpress/demo-plugins/ /usr/src/wordpress/wp-content/plugins/
 
 # Make initialization script executable
 RUN chmod +x /usr/local/bin/docker-entrypoint-init.sh
