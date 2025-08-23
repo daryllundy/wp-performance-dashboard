@@ -20,7 +20,9 @@ services:
     restart: unless-stopped
 
   demo-wordpress:
-    image: wordpress:latest
+    build:
+      context: .
+      dockerfile: demo/wordpress/Dockerfile
     depends_on:
       demo-mysql:
         condition: service_healthy
@@ -30,19 +32,16 @@ services:
       - WORDPRESS_DB_PASSWORD=demo_password
       - WORDPRESS_DB_NAME=demo_wordpress
       - WORDPRESS_DEBUG=true
-      - WORDPRESS_CONFIG_EXTRA=
-        define('WP_DEBUG', true);
-        define('WP_DEBUG_LOG', true);
-        define('SAVEQUERIES', true);
     volumes:
       - demo_wordpress_data:/var/www/html
-      - ./demo/wordpress/wp-config-demo.php:/var/www/html/wp-config-demo.php:ro
-      - ./demo/wordpress/demo-plugins:/var/www/html/wp-content/plugins/demo-plugins
+      - ./demo/wordpress/wp-config-demo.php:/var/www/html/wp-config.php:ro
+      - ./demo/wordpress/init-demo-content.php:/var/www/html/wp-content/mu-plugins/init-demo-content.php:ro
+      - ./demo/wordpress/demo-plugins:/var/www/html/wp-content/plugins/demo-plugins:ro
       - ./demo/wordpress/uploads:/var/www/html/wp-content/uploads
     networks:
       - demo-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/wp-admin/install.php", "||", "exit", "1"]
+      test: ["CMD", "curl", "-f", "http://localhost/", "||", "exit", "1"]
       interval: 30s
       timeout: 10s
       retries: 5

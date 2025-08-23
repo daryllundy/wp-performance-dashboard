@@ -14,21 +14,21 @@
   - Implement database schema extensions for performance tracking tables
   - _Requirements: 1.2, 2.1, 2.2_
 
-- [-] 3. Configure Nginx reverse proxy
+- [x] 3. Configure Nginx reverse proxy
 
   - Create Nginx configuration file for WordPress proxy
   - Set up access logging and caching rules for realistic performance simulation
   - Configure upstream WordPress backend connection
   - _Requirements: 1.1, 2.3_
 
-- [ ] 4. Create WordPress demo configuration
+- [x] 4. Create WordPress demo configuration
 
   - Write custom wp-config.php for demo environment
   - Create WordPress initialization script for demo plugins and themes
   - Set up WordPress container with pre-installed demo content structure
   - _Requirements: 1.3, 4.1, 4.2, 4.3_
 
-- [ ] 5. Implement demo data generator script
+- [x] 5. Implement demo data generator script
 
   - Create Node.js script to generate realistic WordPress demo content
   - Implement database population with posts, pages, users, and media metadata
