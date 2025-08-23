@@ -916,6 +916,181 @@ function captureCurrentState() {
 }
 
 /**
+ * Perform atomic rollback using ContentUpdateManager snapshots
+ * @param {Map} snapshots - Container snapshots for rollback
+ * @param {string} operationId - Operation identifier
+ * @param {Object} partialUpdateState - State of partial updates
+ */
+async function performAtomicRollback(snapshots, operationId, partialUpdateState) {
+    if (!snapshots || snapshots.size === 0) {
+        throw new Error('No snapshots available for atomic rollback');
+    }
+
+    console.warn(`Performing atomic rollback to previous state (Operation ID: ${operationId})`);
+
+    const rollbackPromises = [];
+    const rollbackResults = {
+        successful: [],
+        failed: [],
+        operationId,
+        startTime: Date.now()
+    };
+
+    for (const [containerId, snapshot] of snapshots.entries()) {
+        rollbackPromises.push(
+            window.contentUpdateManager.rollbackContainer(containerId, `Operation ${operationId} failed`)
+                .then(() => {
+                    rollbackResults.successful.push(containerId);
+                    console.debug(`Atomic rollback successful for ${containerId} (Operation ID: ${operationId})`);
+                })
+                .catch(error => {
+                    console.error(`Atomic rollback failed for ${containerId} (Operation ID: ${operationId}):`, error);
+                    rollbackResults.failed.push({
+                        containerId,
+                        error: error.message,
+                        snapshot: snapshot.snapshotId
+                    });
+                })
+        );
+    }
+
+    await Promise.allSettled(rollbackPromises);
+    
+    rollbackResults.endTime = Date.now();
+    rollbackResults.duration = rollbackResults.endTime - rollbackResults.startTime;
+    
+    console.log(`Atomic rollback completed: ${rollbackResults.successful.length}/${snapshots.size} successful (Operation ID: ${operationId})`);
+    
+    if (rollbackResults.failed.length > 0) {
+        console.error(`${rollbackResults.failed.length} atomic rollbacks failed (Operation ID: ${operationId}):`, rollbackResults.failed);
+    }
+    
+    return rollbackResults;
+}
+
+/**
+ * Perform emergency recovery when rollback fails
+ * @param {Map} snapshots - Container snapshots
+ * @param {string} operationId - Operation identifier
+ */
+async function performEmergencyRecovery(snapshots, operationId) {
+    console.error(`Performing emergency recovery (Operation ID: ${operationId})`);
+    
+    const recoveryPromises = [];
+    
+    for (const [containerId] of snapshots.entries()) {
+        recoveryPromises.push(
+            Promise.resolve().then(() => {
+                const container = document.getElementById(containerId);
+                if (container) {
+                    // Force container recreation with emergency cleanup
+                    if (window.DOMCleanup) {
+                        window.DOMCleanup.emergencyCleanup(container);
+                    } else {
+                        // Fallback emergency cleanup
+                        container.innerHTML = `
+                            <div class="emergency-recovery" style="
+                                text-align: center; 
+                                padding: 40px 20px; 
+                                color: #f85149; 
+                                background: rgba(248, 81, 73, 0.1); 
+                                border: 1px solid rgba(248, 81, 73, 0.3); 
+                                border-radius: 8px; 
+                                margin: 20px 0;
+                            ">
+                                <div style="font-size: 24px; margin-bottom: 10px;">🚨</div>
+                                <div style="font-weight: bold; margin-bottom: 8px;">Emergency Recovery</div>
+                                <div style="font-size: 14px; color: #8b949e;">
+                                    Container was reset due to update failure.<br>
+                                    Data will be refreshed automatically.
+                                </div>
+                            </div>
+                        `;
+                    }
+                    console.warn(`Emergency recovery completed for ${containerId} (Operation ID: ${operationId})`);
+                }
+            }).catch(error => {
+                console.error(`Emergency recovery failed for ${containerId} (Operation ID: ${operationId}):`, error);
+            })
+        );
+    }
+    
+    await Promise.allSettled(recoveryPromises);
+    
+    // Trigger a delayed refresh to restore data
+    setTimeout(() => {
+        console.log(`Triggering data refresh after emergency recovery (Operation ID: ${operationId})`);
+        if (typeof loadDashboardData === 'function') {
+            loadDashboardData();
+        }
+    }, 3000);
+}
+
+/**
+ * Log successful update metrics
+ * @param {string} operationId - Operation identifier
+ * @param {number} loadTime - Total load time in milliseconds
+ * @param {Object} updateState - Update state information
+ */
+function logUpdateMetrics(operationId, loadTime, updateState) {
+    const metrics = {
+        operationId,
+        loadTime,
+        updateState,
+        timestamp: Date.now(),
+        success: true
+    };
+    
+    console.debug(`Update metrics (Operation ID: ${operationId}):`, metrics);
+    
+    // Store metrics for performance analysis (optional)
+    if (window.performanceMetrics) {
+        window.performanceMetrics.push(metrics);
+        
+        // Keep only last 50 metrics to prevent memory growth
+        if (window.performanceMetrics.length > 50) {
+            window.performanceMetrics = window.performanceMetrics.slice(-50);
+        }
+    }
+}
+
+/**
+ * Log update failure for debugging
+ * @param {string} operationId - Operation identifier
+ * @param {Error} error - The error that occurred
+ * @param {number} attempts - Number of attempts made
+ * @param {Object} partialUpdateState - State of partial updates
+ */
+function logUpdateFailure(operationId, error, attempts, partialUpdateState) {
+    const failureLog = {
+        operationId,
+        error: {
+            message: error.message,
+            stack: error.stack,
+            name: error.name
+        },
+        attempts,
+        partialUpdateState,
+        timestamp: Date.now(),
+        success: false
+    };
+    
+    console.error(`Update failure log (Operation ID: ${operationId}):`, failureLog);
+    
+    // Store failure logs for debugging (optional)
+    if (!window.updateFailureLogs) {
+        window.updateFailureLogs = [];
+    }
+    
+    window.updateFailureLogs.push(failureLog);
+    
+    // Keep only last 20 failure logs to prevent memory growth
+    if (window.updateFailureLogs.length > 20) {
+        window.updateFailureLogs = window.updateFailureLogs.slice(-20);
+    }
+}
+
+/**
  * Perform rollback to previous state
  * @param {Object} rollbackData - Previously captured state
  */
@@ -964,11 +1139,12 @@ async function performRollback(rollbackData) {
  * @param {Error} error - The error that occurred
  * @param {number} attempts - Number of attempts made
  * @param {number} maxRetries - Maximum number of retries
+ * @param {string} operationId - Operation identifier
  */
-function showEnhancedError(error, attempts, maxRetries) {
+function showEnhancedError(error, attempts, maxRetries, operationId = 'unknown') {
     const errorMessage = attempts > maxRetries 
-        ? `Failed to load dashboard data after ${attempts} attempts. Please refresh the page or check your connection.`
-        : `Loading dashboard data failed (attempt ${attempts}/${maxRetries}). Retrying...`;
+        ? `Failed to load dashboard data after ${attempts} attempts (Operation ID: ${operationId}). Please refresh the page or check your connection.`
+        : `Loading dashboard data failed (attempt ${attempts}/${maxRetries}, Operation ID: ${operationId}). Retrying...`;
     
     showError(errorMessage, error);
 }
