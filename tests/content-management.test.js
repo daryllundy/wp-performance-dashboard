@@ -41,6 +41,10 @@ describe('Content Management Utilities', () => {
             }))
         };
 
+        // Mock NodeFilter and Node for DOM traversal
+        global.NodeFilter = window.NodeFilter;
+        global.Node = window.Node;
+
         // Load the content management utilities
         const fs = require('fs');
         const path = require('path');
@@ -164,8 +168,95 @@ describe('Content Management Utilities', () => {
         });
     });
 
+    describe('DOMSizeMonitor', () => {
+        test('should count DOM nodes accurately', () => {
+            const monitor = new window.DOMSizeMonitor();
+            const container = document.getElementById('test-container');
+            
+            const result = monitor.countNodes(container);
+            
+            expect(result).toHaveProperty('nodeCount');
+            expect(result).toHaveProperty('textNodes');
+            expect(result).toHaveProperty('elementNodes');
+            expect(result).toHaveProperty('containerId');
+            expect(result.nodeCount).toBeGreaterThan(0);
+            expect(result.containerId).toBe('test-container');
+        });
+
+        test('should set and get container limits', () => {
+            const monitor = new window.DOMSizeMonitor();
+            
+            monitor.setContainerLimit('test-container', 500);
+            expect(monitor.getContainerLimit('test-container')).toBe(500);
+            expect(monitor.getContainerLimit('nonexistent')).toBe(1000); // default
+        });
+
+        test('should monitor container and detect status levels', () => {
+            const monitor = new window.DOMSizeMonitor();
+            const container = document.getElementById('test-container');
+            
+            // Set a low limit to trigger warnings
+            monitor.setContainerLimit('test-container', 2);
+            
+            const result = monitor.monitorContainer('test-container');
+            
+            expect(result).toHaveProperty('containerId');
+            expect(result).toHaveProperty('nodeCount');
+            expect(result).toHaveProperty('status');
+            expect(result).toHaveProperty('percentage');
+            expect(result).toHaveProperty('limit');
+            expect(result.containerId).toBe('test-container');
+            expect(['normal', 'warning', 'critical', 'emergency']).toContain(result.status);
+        });
+
+        test('should monitor all containers', () => {
+            const monitor = new window.DOMSizeMonitor();
+            
+            const results = monitor.monitorAllContainers();
+            
+            expect(Array.isArray(results)).toBe(true);
+            expect(results.length).toBeGreaterThan(0);
+        });
+
+        test('should get monitoring statistics', () => {
+            const monitor = new window.DOMSizeMonitor();
+            
+            const stats = monitor.getMonitoringStats();
+            
+            expect(stats).toHaveProperty('totalContainers');
+            expect(stats).toHaveProperty('normal');
+            expect(stats).toHaveProperty('warning');
+            expect(stats).toHaveProperty('critical');
+            expect(stats).toHaveProperty('emergency');
+            expect(stats).toHaveProperty('totalNodes');
+            expect(stats).toHaveProperty('containers');
+            expect(Array.isArray(stats.containers)).toBe(true);
+        });
+
+        test('should start and stop monitoring', (done) => {
+            const monitor = new window.DOMSizeMonitor();
+            
+            monitor.startMonitoring(50); // Short interval for testing
+            
+            setTimeout(() => {
+                monitor.stopMonitoring();
+                done();
+            }, 100);
+        });
+
+        test('should handle missing containers gracefully', () => {
+            const monitor = new window.DOMSizeMonitor();
+            
+            const result = monitor.countNodes('nonexistent');
+            expect(result.error).toBe('Container not found');
+            
+            const monitorResult = monitor.monitorContainer('nonexistent');
+            expect(monitorResult.error).toContain('not found');
+        });
+    });
+
     describe('DOMCleanup', () => {
-        test('should monitor DOM size', () => {
+        test('should monitor DOM size (legacy method)', () => {
             const container = document.getElementById('test-container');
             const result = window.DOMCleanup.monitorDOMSize(container, 5);
             
@@ -189,16 +280,48 @@ describe('Content Management Utilities', () => {
                 window.DOMCleanup.cleanupCharts(container);
             }).not.toThrow();
         });
+
+        test('should perform emergency cleanup', () => {
+            const container = document.getElementById('test-container');
+            const originalContent = container.innerHTML;
+            
+            // Mock loadDashboardData
+            global.loadDashboardData = jest.fn();
+            
+            window.DOMCleanup.emergencyCleanup(container);
+            
+            expect(container.innerHTML).toContain('Emergency Cleanup Performed');
+            expect(container.innerHTML).toContain('🚨');
+            expect(container.innerHTML).not.toBe(originalContent);
+        });
+
+        test('should perform thorough cleanup', () => {
+            const container = document.getElementById('test-container');
+            
+            // Add many query items to simulate accumulation
+            const items = Array.from({ length: 20 }, (_, i) => 
+                `<div class="query-item">Query ${i}</div>`
+            ).join('');
+            container.innerHTML = items;
+            
+            const initialCount = container.querySelectorAll('*').length;
+            
+            window.DOMCleanup.thoroughCleanup(container, 10);
+            
+            const finalCount = container.querySelectorAll('*').length;
+            expect(finalCount).toBeLessThanOrEqual(initialCount);
+        });
     });
 
     describe('ContentUpdateManager', () => {
-        test('should create instance with default settings', () => {
+        test('should create instance with default settings and DOM monitor', () => {
             const manager = new window.ContentUpdateManager();
             
             expect(manager.scrollPreserver).toBeInstanceOf(window.ScrollPreserver);
             expect(manager.updateInProgress).toBeInstanceOf(Set);
             expect(manager.updateQueue).toBeInstanceOf(Map);
             expect(manager.domSizeLimit).toBe(1000);
+            expect(manager.domSizeMonitor).toBeInstanceOf(window.DOMSizeMonitor);
         });
 
         test('should prevent concurrent updates', async () => {
@@ -249,7 +372,7 @@ describe('Content Management Utilities', () => {
             expect(manager.updateQueue.size).toBe(0);
         });
 
-        test('should perform emergency stop', () => {
+        test('should perform emergency stop with DOM monitoring', () => {
             const manager = new window.ContentUpdateManager();
             
             manager.updateInProgress.add('test-container');
@@ -262,17 +385,105 @@ describe('Content Management Utilities', () => {
             expect(manager.updateQueue.size).toBe(0);
             expect(manager.scrollPreserver.scrollPositions.size).toBe(0);
         });
+
+        test('should provide DOM statistics', () => {
+            const manager = new window.ContentUpdateManager();
+            
+            const stats = manager.getDOMStats();
+            
+            expect(stats).toHaveProperty('totalContainers');
+            expect(stats).toHaveProperty('containers');
+            expect(Array.isArray(stats.containers)).toBe(true);
+        });
+
+        test('should set container limits', () => {
+            const manager = new window.ContentUpdateManager();
+            
+            manager.setContainerLimit('test-container', 500);
+            
+            expect(manager.domSizeMonitor.getContainerLimit('test-container')).toBe(500);
+        });
+
+        test('should check all containers manually', () => {
+            const manager = new window.ContentUpdateManager();
+            
+            const results = manager.checkAllContainers();
+            
+            expect(Array.isArray(results)).toBe(true);
+        });
+
+        test('should control DOM monitoring', () => {
+            const manager = new window.ContentUpdateManager();
+            
+            // Should not throw errors
+            expect(() => {
+                manager.stopDOMMonitoring();
+                manager.startDOMMonitoring(1000);
+            }).not.toThrow();
+        });
+
+        test('should integrate DOM monitoring in updates', async () => {
+            const manager = new window.ContentUpdateManager();
+            const container = document.getElementById('test-container');
+            
+            // Set a reasonable limit
+            manager.setContainerLimit('test-container', 100);
+            
+            const updateFunction = jest.fn().mockImplementation(() => {
+                container.innerHTML = '<div>Updated content</div>';
+            });
+            
+            await manager.updateContainer('test-container', updateFunction, {});
+            
+            expect(updateFunction).toHaveBeenCalled();
+            expect(container.innerHTML).toContain('Updated content');
+        });
     });
 
-    describe('Global instances', () => {
+    describe('Global instances and utilities', () => {
         test('should create global contentUpdateManager instance', () => {
             expect(window.contentUpdateManager).toBeInstanceOf(window.ContentUpdateManager);
         });
 
         test('should expose all utility classes globally', () => {
             expect(window.ScrollPreserver).toBeDefined();
+            expect(window.DOMSizeMonitor).toBeDefined();
             expect(window.DOMCleanup).toBeDefined();
             expect(window.ContentUpdateManager).toBeDefined();
+        });
+
+        test('should provide global utility functions', () => {
+            expect(typeof window.checkDOMSizes).toBe('function');
+            expect(typeof window.emergencyCleanupAll).toBe('function');
+        });
+
+        test('should execute global DOM size check', () => {
+            const stats = window.checkDOMSizes();
+            
+            expect(stats).toHaveProperty('totalContainers');
+            expect(stats).toHaveProperty('containers');
+        });
+
+        test('should execute global emergency cleanup', () => {
+            // Add containers that would be cleaned up
+            const slowQueries = document.createElement('div');
+            slowQueries.id = 'slowQueries';
+            slowQueries.innerHTML = '<div>Some content</div>';
+            document.body.appendChild(slowQueries);
+            
+            const pluginPerformance = document.createElement('div');
+            pluginPerformance.id = 'pluginPerformance';
+            pluginPerformance.innerHTML = '<div>Some content</div>';
+            document.body.appendChild(pluginPerformance);
+            
+            // Should not throw errors
+            expect(() => {
+                window.emergencyCleanupAll();
+            }).not.toThrow();
+            
+            // Cleanup
+            document.body.removeChild(slowQueries);
+            document.body.removeChild(pluginPerformance);
         });
     });
 });

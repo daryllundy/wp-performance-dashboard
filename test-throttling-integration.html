@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Throttling and Coordination Integration Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #0d1117;
+            color: #e6edf3;
+        }
+        .container {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .test-controls {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        button {
+            background: #238636;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #2ea043;
+        }
+        button.danger {
+            background: #f85149;
+        }
+        button.danger:hover {
+            background: #ff6b6b;
+        }
+        .log {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 15px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+        .status {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .status-item {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 15px;
+        }
+        .status-item h3 {
+            margin: 0 0 10px 0;
+            color: #58a6ff;
+        }
+        #slowQueries, #pluginPerformance {
+            height: 200px;
+            overflow-y: auto;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .query-item, .plugin-item {
+            background: #21262d;
+            border: 1px solid #30363d;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚀 Throttling and Coordination Integration Test</h1>
+    
+    <div class="container">
+        <h2>Test Controls</h2>
+        <div class="test-controls">
+            <button onclick="testBasicThrottling()">Test Basic Throttling</button>
+            <button onclick="testCoordinatedUpdates()">Test Coordinated Updates</button>
+            <button onclick="testRapidUpdates()">Test Rapid Updates</button>
+            <button onclick="testPriorityOverride()">Test Priority Override</button>
+            <button onclick="testGlobalLock()">Test Global Lock</button>
+            <button class="danger" onclick="emergencyStop()">Emergency Stop</button>
+            <button onclick="resumeOperations()">Resume Operations</button>
+            <button onclick="clearLog()">Clear Log</button>
+        </div>
+    </div>
+
+    <div class="status">
+        <div class="status-item">
+            <h3>Update Status</h3>
+            <div id="updateStatus"></div>
+        </div>
+        <div class="status-item">
+            <h3>Throttling Stats</h3>
+            <div id="throttlingStats"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Test Containers</h2>
+        <div>
+            <h3>Slow Queries</h3>
+            <div id="slowQueries"></div>
+        </div>
+        <div>
+            <h3>Plugin Performance</h3>
+            <div id="pluginPerformance"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Test Log</h2>
+        <div id="testLog" class="log"></div>
+    </div>
+
+    <!-- Load the content management utilities -->
+    <script src="public/js/content-management.js"></script>
+
+    <script>
+        // Test logging
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logElement = document.getElementById('testLog');
+            logElement.textContent += `[${timestamp}] ${message}\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+            console.log(`[TEST] ${message}`);
+        }
+
+        function clearLog() {
+            document.getElementById('testLog').textContent = '';
+        }
+
+        function updateStatus() {
+            const status = window.contentUpdateManager.getAllUpdateStatus();
+            const throttlingStats = window.contentUpdateManager.getThrottlingStats();
+            
+            document.getElementById('updateStatus').innerHTML = `
+                <div>Global Lock: ${status.globalLockActive ? '🔒 Active' : '🔓 Inactive'}</div>
+                <div>Active Updates: ${status.totalActiveUpdates}</div>
+                <div>Queued Updates: ${status.totalQueuedUpdates}</div>
+                <div>Total Locks: ${status.totalLocks}</div>
+            `;
+            
+            document.getElementById('throttlingStats').innerHTML = `
+                <div>Default Delay: ${throttlingStats.defaultDelay}ms</div>
+                <div>Active Throttles: ${throttlingStats.activeThrottles}</div>
+                <div>Pending Throttles: ${throttlingStats.pendingThrottles}</div>
+                <div>Container Delays: ${Object.keys(throttlingStats.containerDelays).length}</div>
+            `;
+        }
+
+        // Test functions
+        async function testBasicThrottling() {
+            log('🧪 Testing Basic Throttling...');
+            
+            const startTime = Date.now();
+            let updateCount = 0;
+            
+            const mockUpdate = (data) => {
+                updateCount++;
+                const elapsed = Date.now() - startTime;
+                log(`Update ${updateCount}: ${data} (${elapsed}ms elapsed)`);
+                document.getElementById('slowQueries').innerHTML += `<div class="query-item">Update ${updateCount}: ${data} at ${elapsed}ms</div>`;
+            };
+
+            // Set throttle delay
+            window.contentUpdateManager.setContainerThrottleDelay('slowQueries', 1000);
+            
+            // Fire rapid updates
+            window.contentUpdateManager.updateContainer('slowQueries', mockUpdate, 'First Update', { cleanupRequired: false });
+            window.contentUpdateManager.updateContainer('slowQueries', mockUpdate, 'Second Update', { cleanupRequired: false });
+            window.contentUpdateManager.updateContainer('slowQueries', mockUpdate, 'Third Update', { cleanupRequired: false });
+            
+            log('✅ Basic throttling test initiated');
+            updateStatus();
+        }
+
+        async function testCoordinatedUpdates() {
+            log('🧪 Testing Coordinated Updates...');
+            
+            const startTime = Date.now();
+            
+            const containerUpdates = [
+                {
+                    containerId: 'slowQueries',
+                    updateFunction: (data) => {
+                        const elapsed = Date.now() - startTime;
+                        log(`Slow Queries Update: ${data} (${elapsed}ms)`);
+                        document.getElementById('slowQueries').innerHTML += `<div class="query-item">Coordinated: ${data} at ${elapsed}ms</div>`;
+                    },
+                    data: 'Coordinated Queries Data',
+                    options: { cleanupRequired: false }
+                },
+                {
+                    containerId: 'pluginPerformance',
+                    updateFunction: (data) => {
+                        const elapsed = Date.now() - startTime;
+                        log(`Plugin Performance Update: ${data} (${elapsed}ms)`);
+                        document.getElementById('pluginPerformance').innerHTML += `<div class="plugin-item">Coordinated: ${data} at ${elapsed}ms</div>`;
+                    },
+                    data: 'Coordinated Plugins Data',
+                    options: { cleanupRequired: false }
+                }
+            ];
+
+            try {
+                await window.contentUpdateManager.coordinateUpdates(containerUpdates, {
+                    sequential: false,
+                    priority: 'normal',
+                    maxConcurrent: 2
+                });
+                log('✅ Coordinated updates completed successfully');
+            } catch (error) {
+                log(`❌ Coordinated updates failed: ${error.message}`);
+            }
+            
+            updateStatus();
+        }
+
+        async function testRapidUpdates() {
+            log('🧪 Testing Rapid Updates (should be throttled)...');
+            
+            const startTime = Date.now();
+            
+            // Set different throttle delays
+            window.contentUpdateManager.setContainerThrottleDelay('slowQueries', 500);
+            window.contentUpdateManager.setContainerThrottleDelay('pluginPerformance', 800);
+            
+            // Fire rapid updates to both containers
+            for (let i = 1; i <= 5; i++) {
+                window.contentUpdateManager.updateContainer('slowQueries', (data) => {
+                    const elapsed = Date.now() - startTime;
+                    log(`Rapid Query Update ${i}: ${elapsed}ms`);
+                    document.getElementById('slowQueries').innerHTML += `<div class="query-item">Rapid ${i}: ${elapsed}ms</div>`;
+                }, `Rapid Query ${i}`, { cleanupRequired: false });
+                
+                window.contentUpdateManager.updateContainer('pluginPerformance', (data) => {
+                    const elapsed = Date.now() - startTime;
+                    log(`Rapid Plugin Update ${i}: ${elapsed}ms`);
+                    document.getElementById('pluginPerformance').innerHTML += `<div class="plugin-item">Rapid ${i}: ${elapsed}ms</div>`;
+                }, `Rapid Plugin ${i}`, { cleanupRequired: false });
+            }
+            
+            log('✅ Rapid updates test initiated');
+            updateStatus();
+        }
+
+        async function testPriorityOverride() {
+            log('🧪 Testing Priority Override...');
+            
+            const startTime = Date.now();
+            
+            // Start a normal priority update
+            window.contentUpdateManager.updateContainer('slowQueries', (data) => {
+                const elapsed = Date.now() - startTime;
+                log(`Normal Priority Update: ${data} (${elapsed}ms)`);
+                document.getElementById('slowQueries').innerHTML += `<div class="query-item">Normal: ${data} at ${elapsed}ms</div>`;
+            }, 'Normal Priority', { priority: 'normal', cleanupRequired: false });
+            
+            // Immediately start a critical priority update
+            window.contentUpdateManager.updateContainer('slowQueries', (data) => {
+                const elapsed = Date.now() - startTime;
+                log(`Critical Priority Update: ${data} (${elapsed}ms)`);
+                document.getElementById('slowQueries').innerHTML += `<div class="query-item">Critical: ${data} at ${elapsed}ms</div>`;
+            }, 'Critical Priority', { priority: 'critical', cleanupRequired: false });
+            
+            log('✅ Priority override test initiated');
+            updateStatus();
+        }
+
+        async function testGlobalLock() {
+            log('🧪 Testing Global Lock...');
+            
+            // Set global lock
+            window.contentUpdateManager.setGlobalUpdateLock(true, 'Test global lock');
+            log('🔒 Global lock activated');
+            
+            // Try normal update (should fail)
+            try {
+                await window.contentUpdateManager.updateContainer('slowQueries', (data) => {
+                    log(`Normal update succeeded: ${data}`);
+                }, 'Should Fail', { priority: 'normal', cleanupRequired: false });
+            } catch (error) {
+                log(`❌ Normal update blocked: ${error.message}`);
+            }
+            
+            // Try critical update (should succeed)
+            try {
+                await window.contentUpdateManager.updateContainer('slowQueries', (data) => {
+                    log(`Critical update succeeded: ${data}`);
+                    document.getElementById('slowQueries').innerHTML += `<div class="query-item">Critical during lock: ${data}</div>`;
+                }, 'Critical Should Work', { priority: 'critical', cleanupRequired: false });
+                log('✅ Critical update bypassed global lock');
+            } catch (error) {
+                log(`❌ Critical update failed: ${error.message}`);
+            }
+            
+            // Release global lock
+            window.contentUpdateManager.setGlobalUpdateLock(false);
+            log('🔓 Global lock released');
+            
+            updateStatus();
+        }
+
+        function emergencyStop() {
+            log('🚨 EMERGENCY STOP ACTIVATED');
+            window.contentUpdateManager.emergencyStop();
+            updateStatus();
+        }
+
+        function resumeOperations() {
+            log('🔄 Resuming operations...');
+            window.contentUpdateManager.resumeOperations();
+            updateStatus();
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            log('🚀 Throttling and Coordination Integration Test Ready');
+            log('📊 Content Update Manager initialized');
+            
+            // Update status every 2 seconds
+            setInterval(updateStatus, 2000);
+            updateStatus();
+            
+            // Add some initial content
+            document.getElementById('slowQueries').innerHTML = '<div class="query-item">Ready for testing...</div>';
+            document.getElementById('pluginPerformance').innerHTML = '<div class="plugin-item">Ready for testing...</div>';
+        });
+    </script>
+</body>
+</html>
