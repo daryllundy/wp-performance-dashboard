@@ -44,7 +44,7 @@
   - Add memory usage variation features
   - _Requirements: 2.1, 2.2, 2.3_
 
-- [-] 7. Set up demo management scripts
+- [x] 7. Set up demo management scripts
 
   - Create shell script for demo environment setup and initialization
   - Implement demo reset functionality to restore original state
@@ -52,7 +52,7 @@
   - Create cleanup script for demo environment teardown
   - _Requirements: 5.1, 5.2, 5.3, 5.4_
 
-- [ ] 8. Create demo environment documentation
+- [-] 8. Create demo environment documentation
 
   - Write README section for demo environment usage
   - Create quick start guide for demo setup
