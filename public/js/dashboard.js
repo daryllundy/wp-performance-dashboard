@@ -1935,3 +1935,22 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+// Export functions for testing
+if (typeof global !== 'undefined') {
+    global.loadDashboardData = loadDashboardData;
+    global.performAtomicCoordinatedUpdates = performAtomicCoordinatedUpdates;
+    global.performFallbackUpdates = performFallbackUpdates;
+    global.validateDashboardData = validateDashboardData;
+    global.performAtomicRollback = performAtomicRollback;
+    global.performEmergencyRecovery = performEmergencyRecovery;
+    global.logUpdateMetrics = logUpdateMetrics;
+    global.logUpdateFailure = logUpdateFailure;
+    global.updateSlowQueriesContent = updateSlowQueriesContent;
+    global.updatePluginPerformanceContent = updatePluginPerformanceContent;
+    global.updateNonScrollableContent = updateNonScrollableContent;
+    global.fetchWithRetry = fetchWithRetry;
+    global.parseResponseSafely = parseResponseSafely;
+    global.showEnhancedError = showEnhancedError;
+    global.clearErrorState = clearErrorState;
+    global.escapeHtml = escapeHtml;
+}
