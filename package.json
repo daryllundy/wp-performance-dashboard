@@ -24,6 +24,7 @@
   "devDependencies": {
     "jest": "^30.0.5",
     "jsdom": "^26.1.0",
+    "supertest": "^7.1.4",
     "yaml": "^2.8.1"
   }
 }

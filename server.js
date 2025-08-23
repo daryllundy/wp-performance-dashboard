@@ -4,6 +4,7 @@ const socketIo = require('socket.io');
 const mysql = require('mysql2/promise');
 const path = require('path');
 const fetch = require('node-fetch');
+const { spawn } = require('child_process');
 require('dotenv').config();
 
 const app = express();
@@ -16,8 +17,23 @@ const wpApiUrl = process.env.WP_API_URL;
 const wpApiUsername = process.env.WP_API_USERNAME;
 const wpApiPassword = process.env.WP_API_PASSWORD;
 
-// Database configuration (only if not using external WordPress)
+// Demo environment detection
+const isDemoMode = process.env.DEMO_MODE === 'true' || process.env.NODE_ENV === 'demo';
+const demoDbConfig = {
+  host: 'demo-mysql',
+  user: 'demo_user',
+  password: 'demo_password',
+  database: 'demo_wordpress',
+  port: 3306,
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
+};
+
+// Database configuration
 let pool = null;
+let demoPool = null;
+
 if (!useExternalWP) {
   const dbConfig = {
     host: process.env.DB_HOST || 'localhost',
@@ -29,6 +45,19 @@ if (!useExternalWP) {
     queueLimit: 0
   };
   pool = mysql.createPool(dbConfig);
+}
+
+// Initialize demo database connection if in demo mode or for demo detection
+if (isDemoMode) {
+  demoPool = mysql.createPool(demoDbConfig);
+  console.log('🎭 Demo mode enabled - connecting to demo database');
+} else {
+  // Try to connect to demo database for detection (non-blocking)
+  try {
+    demoPool = mysql.createPool({...demoDbConfig, acquireTimeout: 2000, timeout: 2000});
+  } catch (error) {
+    console.log('Demo database not available for detection');
+  }
 }
 
 // WordPress API helper functions
@@ -67,19 +96,31 @@ async function fetchFromWPApi(endpoint, method = 'GET', data = null) {
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Helper function to get appropriate database pool
+function getDbPool(req) {
+  const useDemo = req.query.demo === 'true' || isDemoMode;
+  return useDemo && demoPool ? demoPool : pool;
+}
+
 // API Routes
 app.get('/api/metrics', async (req, res) => {
   try {
     const timeRange = req.query.timeRange || '1h';
     const limit = req.query.limit || 50;
+    const useDemo = req.query.demo === 'true' || isDemoMode;
 
-    if (useExternalWP) {
+    if (useExternalWP && !useDemo) {
       // Use WordPress API for external WordPress
       const data = await fetchFromWPApi(`/wp-json/wp-performance-dashboard/v1/metrics?timeRange=${timeRange}&limit=${limit}`);
       res.json(data);
     } else {
-      // Use direct database query for local setup
-      const [rows] = await pool.execute(
+      // Use direct database query for local setup or demo
+      const dbPool = getDbPool(req);
+      if (!dbPool) {
+        return res.status(400).json({ error: 'Database not available' });
+      }
+
+      const [rows] = await dbPool.execute(
         `SELECT * FROM performance_metrics ORDER BY timestamp DESC LIMIT ${parseInt(limit)}`
       );
       res.json(rows);
@@ -93,14 +134,20 @@ app.get('/api/metrics', async (req, res) => {
 app.get('/api/slow-queries', async (req, res) => {
   try {
     const limit = req.query.limit || 20;
+    const useDemo = req.query.demo === 'true' || isDemoMode;
 
-    if (useExternalWP) {
+    if (useExternalWP && !useDemo) {
       // Use WordPress API for external WordPress
       const data = await fetchFromWPApi(`/wp-json/wp-performance-dashboard/v1/slow-queries?limit=${limit}`);
       res.json(data);
     } else {
-      // Use direct database query for local setup
-      const [rows] = await pool.execute(
+      // Use direct database query for local setup or demo
+      const dbPool = getDbPool(req);
+      if (!dbPool) {
+        return res.status(400).json({ error: 'Database not available' });
+      }
+
+      const [rows] = await dbPool.execute(
         'SELECT * FROM slow_queries ORDER BY execution_time DESC LIMIT ?',
         [parseInt(limit)]
       );
@@ -114,13 +161,20 @@ app.get('/api/slow-queries', async (req, res) => {
 
 app.get('/api/admin-ajax', async (req, res) => {
   try {
-    if (useExternalWP) {
+    const useDemo = req.query.demo === 'true' || isDemoMode;
+
+    if (useExternalWP && !useDemo) {
       // Use WordPress API for external WordPress
       const data = await fetchFromWPApi('/wp-json/wp-performance-dashboard/v1/admin-ajax');
       res.json(data);
     } else {
-      // Use direct database query for local setup
-      const [rows] = await pool.execute(
+      // Use direct database query for local setup or demo
+      const dbPool = getDbPool(req);
+      if (!dbPool) {
+        return res.status(400).json({ error: 'Database not available' });
+      }
+
+      const [rows] = await dbPool.execute(
         'SELECT * FROM admin_ajax_calls ORDER BY call_count DESC LIMIT 20'
       );
       res.json(rows);
@@ -133,13 +187,20 @@ app.get('/api/admin-ajax', async (req, res) => {
 
 app.get('/api/plugins', async (req, res) => {
   try {
-    if (useExternalWP) {
+    const useDemo = req.query.demo === 'true' || isDemoMode;
+
+    if (useExternalWP && !useDemo) {
       // Use WordPress API for external WordPress
       const data = await fetchFromWPApi('/wp-json/wp-performance-dashboard/v1/plugins');
       res.json(data);
     } else {
-      // Use direct database query for local setup
-      const [rows] = await pool.execute(
+      // Use direct database query for local setup or demo
+      const dbPool = getDbPool(req);
+      if (!dbPool) {
+        return res.status(400).json({ error: 'Database not available' });
+      }
+
+      const [rows] = await dbPool.execute(
         'SELECT * FROM plugin_performance ORDER BY impact_score DESC'
       );
       res.json(rows);
@@ -153,13 +214,20 @@ app.get('/api/plugins', async (req, res) => {
 // Real-time metrics endpoint
 app.get('/api/realtime-metrics', async (req, res) => {
   try {
-    if (useExternalWP) {
+    const useDemo = req.query.demo === 'true' || isDemoMode;
+
+    if (useExternalWP && !useDemo) {
       // Use WordPress API for external WordPress
       const data = await fetchFromWPApi('/wp-json/wp-performance-dashboard/v1/realtime-metrics');
       res.json(data);
     } else {
-      // Use direct database query for local setup
-      const [metrics] = await pool.execute(
+      // Use direct database query for local setup or demo
+      const dbPool = getDbPool(req);
+      if (!dbPool) {
+        return res.status(400).json({ error: 'Database not available' });
+      }
+
+      const [metrics] = await dbPool.execute(
         'SELECT AVG(queries_per_second) as avg_qps, AVG(avg_response_time) as avg_response, AVG(memory_usage) as avg_memory FROM performance_metrics WHERE timestamp > DATE_SUB(NOW(), INTERVAL 5 MINUTE)'
       );
       res.json(metrics[0] || { avg_qps: 0, avg_response: 0, avg_memory: 0 });
@@ -173,21 +241,29 @@ app.get('/api/realtime-metrics', async (req, res) => {
 // System health endpoint
 app.get('/api/system-health', async (req, res) => {
   try {
-    if (useExternalWP) {
+    const useDemo = req.query.demo === 'true' || isDemoMode;
+
+    if (useExternalWP && !useDemo) {
       // Use WordPress API for external WordPress
       const data = await fetchFromWPApi('/wp-json/wp-performance-dashboard/v1/system-health');
       res.json(data);
     } else {
-      // Use direct database query for local setup
-      const [queryCount] = await pool.execute('SELECT COUNT(*) as total FROM slow_queries WHERE timestamp > DATE_SUB(NOW(), INTERVAL 1 HOUR)');
-      const [pluginCount] = await pool.execute('SELECT COUNT(*) as total FROM plugin_performance WHERE status = "active"');
-      const [avgResponse] = await pool.execute('SELECT AVG(avg_response_time) as avg FROM performance_metrics WHERE timestamp > DATE_SUB(NOW(), INTERVAL 1 HOUR)');
+      // Use direct database query for local setup or demo
+      const dbPool = getDbPool(req);
+      if (!dbPool) {
+        return res.status(400).json({ error: 'Database not available' });
+      }
+
+      const [queryCount] = await dbPool.execute('SELECT COUNT(*) as total FROM slow_queries WHERE timestamp > DATE_SUB(NOW(), INTERVAL 1 HOUR)');
+      const [pluginCount] = await dbPool.execute('SELECT COUNT(*) as total FROM plugin_performance WHERE status = "active"');
+      const [avgResponse] = await dbPool.execute('SELECT AVG(avg_response_time) as avg FROM performance_metrics WHERE timestamp > DATE_SUB(NOW(), INTERVAL 1 HOUR)');
 
       res.json({
         slow_queries_1h: queryCount[0].total,
         active_plugins: pluginCount[0].total,
         avg_response_time: avgResponse[0].avg || 0,
-        status: 'healthy'
+        status: 'healthy',
+        demo_mode: useDemo
       });
     }
   } catch (error) {
@@ -196,9 +272,120 @@ app.get('/api/system-health', async (req, res) => {
   }
 });
 
+// Demo environment status endpoint
+app.get('/api/demo-status', async (req, res) => {
+  try {
+    const status = {
+      available: false,
+      services: {
+        mysql: false,
+        wordpress: false,
+        nginx: false
+      },
+      mode: isDemoMode ? 'active' : 'detection',
+      connection: null,
+      lastCheck: new Date().toISOString()
+    };
+
+    if (demoPool) {
+      try {
+        // Test demo database connection
+        const [rows] = await demoPool.execute('SELECT 1 as test');
+        status.services.mysql = true;
+        status.connection = 'mysql_connected';
+        
+        // Check for demo data presence
+        const [demoData] = await demoPool.execute('SELECT COUNT(*) as count FROM wp_posts WHERE post_status = "publish"');
+        status.demoDataCount = demoData[0].count;
+        
+        // Test WordPress service (if accessible)
+        try {
+          const response = await fetch('http://demo-nginx:80/', { timeout: 2000 });
+          if (response.ok) {
+            status.services.nginx = true;
+            status.services.wordpress = true;
+          }
+        } catch (wpError) {
+          // WordPress/Nginx not accessible, but MySQL is working
+        }
+        
+        status.available = status.services.mysql;
+      } catch (dbError) {
+        status.connection = `mysql_error: ${dbError.message}`;
+      }
+    }
+
+    res.json(status);
+  } catch (error) {
+    console.error('Error checking demo status:', error);
+    res.status(500).json({ 
+      error: 'Failed to check demo status',
+      available: false,
+      mode: isDemoMode ? 'active' : 'detection',
+      lastCheck: new Date().toISOString()
+    });
+  }
+});
+
+// Demo data refresh endpoint
+app.post('/api/demo-refresh', async (req, res) => {
+  try {
+    if (!demoPool) {
+      return res.status(400).json({ error: 'Demo environment not available' });
+    }
+
+    // Trigger demo data regeneration
+    const refreshProcess = spawn('node', ['/app/demo/scripts/generate-demo-data.js'], {
+      env: {
+        ...process.env,
+        DB_HOST: 'demo-mysql',
+        DB_USER: 'demo_user',
+        DB_PASSWORD: 'demo_password',
+        DB_NAME: 'demo_wordpress'
+      }
+    });
+
+    let output = '';
+    refreshProcess.stdout.on('data', (data) => {
+      output += data.toString();
+    });
+
+    refreshProcess.on('close', (code) => {
+      if (code === 0) {
+        res.json({ 
+          success: true, 
+          message: 'Demo data refreshed successfully',
+          output: output.slice(-500) // Last 500 chars of output
+        });
+      } else {
+        res.status(500).json({ 
+          error: 'Demo data refresh failed', 
+          code: code,
+          output: output.slice(-500)
+        });
+      }
+    });
+
+    // Timeout after 30 seconds
+    setTimeout(() => {
+      refreshProcess.kill();
+      res.status(408).json({ error: 'Demo refresh timeout' });
+    }, 30000);
+
+  } catch (error) {
+    console.error('Error refreshing demo data:', error);
+    res.status(500).json({ error: 'Failed to refresh demo data' });
+  }
+});
+
 // Health check endpoint for Docker
 app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'healthy', timestamp: new Date().toISOString() });
+  res.status(200).json({ 
+    status: 'healthy', 
+    timestamp: new Date().toISOString(),
+    demoMode: isDemoMode,
+    demoAvailable: !!demoPool
+  });
 });
 
 // WebSocket connection handling
@@ -213,7 +400,7 @@ io.on('connection', (socket) => {
 // Real-time data broadcasting
 setInterval(async () => {
   try {
-    if (useExternalWP) {
+    if (useExternalWP && !isDemoMode) {
       // Use WordPress API for external WordPress
       const data = await fetchFromWPApi('/wp-json/wp-performance-dashboard/v1/realtime-metrics');
       if (data && data.queries_per_second !== undefined) {
@@ -221,23 +408,28 @@ setInterval(async () => {
           queries_per_second: data.queries_per_second,
           avg_response_time: data.avg_response_time,
           memory_usage: data.memory_usage,
-          timestamp: data.timestamp || new Date().toISOString()
+          timestamp: data.timestamp || new Date().toISOString(),
+          demo_mode: false
         });
       }
     } else {
-      // Use direct database query for local setup
-      const [metrics] = await pool.execute(
-        'SELECT * FROM performance_metrics ORDER BY timestamp DESC LIMIT 1'
-      );
+      // Use direct database query for local setup or demo
+      const dbPool = isDemoMode && demoPool ? demoPool : pool;
+      if (dbPool) {
+        const [metrics] = await dbPool.execute(
+          'SELECT * FROM performance_metrics ORDER BY timestamp DESC LIMIT 1'
+        );
 
-      if (metrics.length > 0) {
-        const latestMetrics = metrics[0];
-        io.emit('real-time-metrics', {
-          queries_per_second: latestMetrics.queries_per_second,
-          avg_response_time: latestMetrics.avg_response_time,
-          memory_usage: latestMetrics.memory_usage,
-          timestamp: latestMetrics.timestamp
-        });
+        if (metrics.length > 0) {
+          const latestMetrics = metrics[0];
+          io.emit('real-time-metrics', {
+            queries_per_second: latestMetrics.queries_per_second,
+            avg_response_time: latestMetrics.avg_response_time,
+            memory_usage: latestMetrics.memory_usage,
+            timestamp: latestMetrics.timestamp,
+            demo_mode: isDemoMode
+          });
+        }
       }
     }
   } catch (error) {

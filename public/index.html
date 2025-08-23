@@ -18,8 +18,16 @@
                     <span class="dot" id="connection-status"></span>
                     <span>Real-time Monitoring</span>
                 </div>
+                <div class="demo-indicator" id="demo-indicator" style="display: none;">
+                    <span class="demo-badge">🎭 DEMO MODE</span>
+                    <span class="demo-status" id="demo-status">Checking...</span>
+                </div>
             </div>
             <div class="header-right">
+                <div class="demo-controls" id="demo-controls" style="display: none;">
+                    <button id="demo-toggle" class="demo-toggle-btn">Switch to Demo</button>
+                    <button id="demo-refresh" class="demo-refresh-btn" title="Refresh Demo Data">🔄</button>
+                </div>
                 <div class="time-range-selector">
                     <label>Time Range:</label>
                     <select id="timeRange">

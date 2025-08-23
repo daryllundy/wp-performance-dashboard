@@ -63,6 +63,35 @@ A comprehensive, real-time WordPress performance monitoring dashboard built with
 - MySQL 8.0+
 - Docker and Docker Compose (optional)
 
+### Demo Environment (Recommended)
+
+The fastest way to explore the dashboard is using our comprehensive demo environment:
+
+```bash
+# Start complete demo environment with WordPress + Dashboard
+./demo/start-demo.sh start --with-dashboard
+
+# Access the demo:
+# - WordPress: http://localhost:8090 (admin/demo_password)
+# - Performance Dashboard: http://localhost:3001
+# - MySQL: localhost:3307 (demo_user/demo_password)
+
+# Check status
+./demo/status-demo.sh
+
+# Stop demo
+./demo/start-demo.sh stop
+```
+
+The demo includes:
+- ✅ Pre-configured WordPress with realistic content (75+ posts, 15+ pages)
+- ✅ Performance monitoring data (5000+ performance logs, 1000+ AJAX calls)
+- ✅ Multiple performance scenarios (light, medium, heavy, critical load)
+- ✅ Plugin performance simulation (WooCommerce, Yoast SEO, etc.)
+- ✅ Real-time performance dashboard with live data
+
+For detailed demo documentation, see [demo/README.md](demo/README.md).
+
 ### Installation Options
 
 #### Option 1: Direct Node.js Setup

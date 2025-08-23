@@ -3,6 +3,11 @@ let performanceChart, adminAjaxChart;
 let qpsGauge, responseGauge, memoryGauge;
 let currentMetric = 'response_time';
 
+// Demo mode state
+let demoMode = false;
+let demoStatus = { available: false, services: {} };
+let demoCheckInterval = null;
+
 // Chart.js default configuration
 Chart.defaults.font.family = 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
 Chart.defaults.font.size = 12;
@@ -269,12 +274,13 @@ async function loadDashboardData() {
         }
 
         // Fetch all data in parallel with timeout and retry logic
+        const demoParam = demoMode ? '?demo=true' : '';
         const fetchPromises = [
-            fetchWithRetry('/api/metrics', 'metrics'),
-            fetchWithRetry('/api/slow-queries', 'slow-queries'),
-            fetchWithRetry('/api/admin-ajax', 'admin-ajax'),
-            fetchWithRetry('/api/plugins', 'plugins'),
-            fetchWithRetry('/api/system-health', 'system-health')
+            fetchWithRetry(`/api/metrics${demoParam}`, 'metrics'),
+            fetchWithRetry(`/api/slow-queries${demoParam}`, 'slow-queries'),
+            fetchWithRetry(`/api/admin-ajax${demoParam}`, 'admin-ajax'),
+            fetchWithRetry(`/api/plugins${demoParam}`, 'plugins'),
+            fetchWithRetry(`/api/system-health${demoParam}`, 'system-health')
         ];
 
         const [metricsResponse, queriesResponse, ajaxResponse, pluginsResponse, healthResponse] = 
@@ -1438,6 +1444,14 @@ const REAL_TIME_THROTTLE_MS = 1000; // Throttle real-time updates to prevent exc
 
 // Socket.IO real-time updates with memory leak prevention
 socket.on('real-time-metrics', (data) => {
+    // Update demo mode indicator if data includes demo_mode flag
+    if (data.demo_mode !== undefined) {
+        const demoIndicator = document.getElementById('demo-indicator');
+        if (data.demo_mode && demoIndicator) {
+            demoIndicator.style.display = 'flex';
+        }
+    }
+
     // Throttle updates to prevent memory leaks from rapid successive updates
     const now = Date.now();
     if (realTimeUpdateInProgress || (now - lastRealTimeUpdate) < REAL_TIME_THROTTLE_MS) {
@@ -1615,6 +1629,7 @@ let dataRefreshInterval = null;
 // Event listeners
 document.addEventListener('DOMContentLoaded', () => {
     initCharts();
+    initDemoMode();
     
     // Initialize performance monitoring
     if (window.performanceMonitor) {
@@ -1935,6 +1950,189 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+
+// Demo Mode Functions
+async function checkDemoStatus() {
+    try {
+        const response = await fetch('/api/demo-status');
+        const status = await response.json();
+        
+        demoStatus = status;
+        updateDemoUI(status);
+        
+        console.log('Demo status:', status);
+        return status;
+    } catch (error) {
+        console.error('Error checking demo status:', error);
+        demoStatus = { available: false, services: {} };
+        updateDemoUI(demoStatus);
+        return demoStatus;
+    }
+}
+
+function updateDemoUI(status) {
+    const demoIndicator = document.getElementById('demo-indicator');
+    const demoControls = document.getElementById('demo-controls');
+    const demoStatusElement = document.getElementById('demo-status');
+    const demoToggle = document.getElementById('demo-toggle');
+    
+    if (status.available || status.mode === 'active') {
+        // Show demo controls
+        if (demoControls) demoControls.style.display = 'flex';
+        
+        // Update demo indicator
+        if (demoIndicator && status.mode === 'active') {
+            demoIndicator.style.display = 'flex';
+            if (demoStatusElement) {
+                demoStatusElement.textContent = `Connected • ${status.demoDataCount || 0} posts`;
+            }
+        }
+        
+        // Update toggle button
+        if (demoToggle) {
+            if (demoMode || status.mode === 'active') {
+                demoToggle.textContent = 'Switch to Live';
+                demoToggle.classList.add('active');
+            } else {
+                demoToggle.textContent = 'Switch to Demo';
+                demoToggle.classList.remove('active');
+            }
+        }
+    } else {
+        // Hide demo controls if not available
+        if (demoControls) demoControls.style.display = 'none';
+        if (demoIndicator) demoIndicator.style.display = 'none';
+    }
+}
+
+function toggleDemoMode() {
+    demoMode = !demoMode;
+    
+    // Update UI immediately
+    const demoIndicator = document.getElementById('demo-indicator');
+    const demoToggle = document.getElementById('demo-toggle');
+    
+    if (demoMode) {
+        if (demoIndicator) demoIndicator.style.display = 'flex';
+        if (demoToggle) {
+            demoToggle.textContent = 'Switch to Live';
+            demoToggle.classList.add('active');
+        }
+    } else {
+        if (demoIndicator) demoIndicator.style.display = 'none';
+        if (demoToggle) {
+            demoToggle.textContent = 'Switch to Demo';
+            demoToggle.classList.remove('active');
+        }
+    }
+    
+    // Reload dashboard data with new mode
+    loadDashboardData();
+    
+    console.log(`Switched to ${demoMode ? 'demo' : 'live'} mode`);
+}
+
+async function refreshDemoData() {
+    const refreshBtn = document.getElementById('demo-refresh');
+    if (!refreshBtn) return;
+    
+    try {
+        refreshBtn.disabled = true;
+        refreshBtn.classList.add('loading');
+        
+        const response = await fetch('/api/demo-refresh', { method: 'POST' });
+        const result = await response.json();
+        
+        if (result.success) {
+            // Show success message
+            showNotification('Demo data refreshed successfully!', 'success');
+            
+            // Reload dashboard data after a short delay
+            setTimeout(() => {
+                loadDashboardData();
+            }, 1000);
+        } else {
+            showNotification(`Demo refresh failed: ${result.error}`, 'error');
+        }
+    } catch (error) {
+        console.error('Error refreshing demo data:', error);
+        showNotification('Failed to refresh demo data', 'error');
+    } finally {
+        refreshBtn.disabled = false;
+        refreshBtn.classList.remove('loading');
+    }
+}
+
+function showNotification(message, type = 'info') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.textContent = message;
+    
+    // Add styles
+    Object.assign(notification.style, {
+        position: 'fixed',
+        top: '20px',
+        right: '20px',
+        padding: '12px 20px',
+        borderRadius: '6px',
+        color: '#fff',
+        fontWeight: '500',
+        zIndex: '10000',
+        animation: 'slideIn 0.3s ease-out',
+        maxWidth: '300px',
+        wordWrap: 'break-word'
+    });
+    
+    // Set background color based on type
+    switch (type) {
+        case 'success':
+            notification.style.background = '#28a745';
+            break;
+        case 'error':
+            notification.style.background = '#dc3545';
+            break;
+        default:
+            notification.style.background = '#17a2b8';
+    }
+    
+    document.body.appendChild(notification);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease-in';
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }, 3000);
+}
+
+// Initialize demo mode functionality
+function initDemoMode() {
+    // Check demo status on load
+    checkDemoStatus();
+    
+    // Set up periodic demo status checking (every 30 seconds)
+    demoCheckInterval = setInterval(checkDemoStatus, 30000);
+    
+    // Set up event listeners
+    const demoToggle = document.getElementById('demo-toggle');
+    const demoRefresh = document.getElementById('demo-refresh');
+    
+    if (demoToggle) {
+        demoToggle.addEventListener('click', toggleDemoMode);
+    }
+    
+    if (demoRefresh) {
+        demoRefresh.addEventListener('click', refreshDemoData);
+    }
+}
+
+// Update loadDashboardData to support demo mode
+const originalLoadDashboardData = loadDashboardData;
+
 // Export functions for testing
 if (typeof global !== 'undefined') {
     global.loadDashboardData = loadDashboardData;
