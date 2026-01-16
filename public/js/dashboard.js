@@ -20,6 +20,11 @@ function initCharts() {
     initGauges();
 }
 
+function getSelectedTimeRange() {
+    const selector = document.getElementById('timeRange');
+    return selector ? selector.value : '1h';
+}
+
 function initPerformanceChart() {
     const ctx = document.getElementById('performanceChart').getContext('2d');
     performanceChart = new Chart(ctx, {
@@ -274,13 +279,21 @@ async function loadDashboardData() {
         }
 
         // Fetch all data in parallel with timeout and retry logic
-        const demoParam = demoMode ? '?demo=true' : '';
+        const timeRange = getSelectedTimeRange();
+        const queryParams = new URLSearchParams();
+        if (demoMode) {
+            queryParams.set('demo', 'true');
+        }
+        if (timeRange) {
+            queryParams.set('timeRange', timeRange);
+        }
+        const querySuffix = queryParams.toString() ? `?${queryParams.toString()}` : '';
         const fetchPromises = [
-            fetchWithRetry(`/api/metrics${demoParam}`, 'metrics'),
-            fetchWithRetry(`/api/slow-queries${demoParam}`, 'slow-queries'),
-            fetchWithRetry(`/api/admin-ajax${demoParam}`, 'admin-ajax'),
-            fetchWithRetry(`/api/plugins${demoParam}`, 'plugins'),
-            fetchWithRetry(`/api/system-health${demoParam}`, 'system-health')
+            fetchWithRetry(`/api/metrics${querySuffix}`, 'metrics'),
+            fetchWithRetry(`/api/slow-queries${querySuffix}`, 'slow-queries'),
+            fetchWithRetry(`/api/admin-ajax${querySuffix}`, 'admin-ajax'),
+            fetchWithRetry(`/api/plugins${querySuffix}`, 'plugins'),
+            fetchWithRetry(`/api/system-health${querySuffix}`, 'system-health')
         ];
 
         const [metricsResponse, queriesResponse, ajaxResponse, pluginsResponse, healthResponse] = 
@@ -312,6 +325,8 @@ async function loadDashboardData() {
 
         const loadTime = Date.now() - loadStartTime;
         console.log(`Dashboard data loading completed successfully in ${loadTime}ms (Operation ID: ${operationId})`);
+
+        updateRecommendations(health, queries, plugins);
 
         // Clear any previous error states and cleanup snapshots
         clearErrorState();
@@ -1435,6 +1450,111 @@ function updateSystemHealth(health) {
     document.getElementById('health-avg-response').textContent = Math.round(health.avg_response_time || 0) + 'ms';
     document.getElementById('health-active-plugins').textContent = health.active_plugins || 0;
     document.getElementById('health-status').textContent = health.status || 'Unknown';
+
+    const cpuElement = document.getElementById('health-cpu-usage');
+    const memoryElement = document.getElementById('health-memory-usage');
+    const diskElement = document.getElementById('health-disk-usage');
+    const cacheElement = document.getElementById('health-cache-hit');
+
+    if (cpuElement) {
+        cpuElement.textContent = `${Math.round(health.cpu_usage || 0)}%`;
+    }
+
+    if (memoryElement) {
+        const memoryUsed = health.memory_used || 0;
+        const memoryTotal = health.memory_total || 0;
+        const memoryPercent = health.memory_usage_percent || (memoryTotal ? (memoryUsed / memoryTotal) * 100 : 0);
+        const usedDisplay = memoryUsed ? `${Math.round(memoryUsed)}MB` : '0MB';
+        const totalDisplay = memoryTotal ? `${Math.round(memoryTotal)}MB` : '0MB';
+        memoryElement.textContent = `${usedDisplay} / ${totalDisplay} (${Math.round(memoryPercent)}%)`;
+    }
+
+    if (diskElement) {
+        diskElement.textContent = `${Math.round(health.disk_usage || 0)}%`;
+    }
+
+    if (cacheElement) {
+        cacheElement.textContent = `${Math.round(health.cache_hit_ratio || 0)}%`;
+    }
+}
+
+function updateRecommendations(health, queries, plugins) {
+    const container = document.getElementById('recommendations');
+    if (!container) {
+        return;
+    }
+
+    const recommendations = [];
+    const slowQueryCount = health?.slow_queries_1h || (queries ? queries.length : 0);
+    const avgResponse = health?.avg_response_time || 0;
+    const cpuUsage = health?.cpu_usage || 0;
+    const memoryPercent = health?.memory_usage_percent || 0;
+    const cacheHitRatio = health?.cache_hit_ratio || 0;
+
+    if (slowQueryCount > 0) {
+        recommendations.push({
+            type: 'warning',
+            icon: '⚠️',
+            title: 'Query Optimization',
+            message: `${slowQueryCount} slow queries detected in the selected time range. Review indexes and reduce full table scans.`
+        });
+    }
+
+    if (avgResponse > 2000) {
+        recommendations.push({
+            type: 'warning',
+            icon: '⏱️',
+            title: 'High Response Time',
+            message: `Average response time is ${Math.round(avgResponse)}ms. Consider caching and backend profiling.`
+        });
+    }
+
+    const highImpactPlugins = (plugins || []).filter(plugin => (plugin.impact_score || 0) > 70);
+    if (highImpactPlugins.length > 0) {
+        recommendations.push({
+            type: 'info',
+            icon: '🔌',
+            title: 'Plugin Review',
+            message: `${highImpactPlugins.length} high-impact plugins detected. Review plugin necessity or optimize settings.`
+        });
+    }
+
+    if (cacheHitRatio > 0 && cacheHitRatio < 80) {
+        recommendations.push({
+            type: 'info',
+            icon: '🧊',
+            title: 'Caching Strategy',
+            message: `Cache hit ratio is ${Math.round(cacheHitRatio)}%. Consider enabling object caching (Redis/Memcached).`
+        });
+    }
+
+    if (cpuUsage > 80 || memoryPercent > 80) {
+        recommendations.push({
+            type: 'warning',
+            icon: '🔥',
+            title: 'Resource Pressure',
+            message: `Resource usage is elevated (CPU ${Math.round(cpuUsage)}%, Memory ${Math.round(memoryPercent)}%). Consider scaling resources.`
+        });
+    }
+
+    if (recommendations.length === 0) {
+        recommendations.push({
+            type: 'success',
+            icon: '✅',
+            title: 'All Clear',
+            message: 'No critical performance issues detected for the selected time range.'
+        });
+    }
+
+    container.innerHTML = recommendations.map(rec => `
+        <div class="recommendation ${rec.type}">
+            <div class="recommendation-icon">${rec.icon}</div>
+            <div class="recommendation-content">
+                <strong>${rec.title}:</strong>
+                <p>${rec.message}</p>
+            </div>
+        </div>
+    `).join('');
 }
 
 // Memory leak prevention for real-time updates

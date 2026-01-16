@@ -204,9 +204,9 @@ class DOMSizeMonitor {
             false
         );
 
-        let totalNodes = 0;
+        let totalNodes = 1; // Count the container element itself
         let textNodes = 0;
-        let elementNodes = 0;
+        let elementNodes = 1;
 
         while (walker.nextNode()) {
             totalNodes++;
@@ -696,6 +696,8 @@ class ContentUpdateManager {
         this.corruptionDetection = true; // Enable/disable corruption detection
         this.maxRollbackAttempts = 3; // Maximum rollback attempts per container
         this.rollbackAttempts = new Map(); // Track rollback attempts per container
+        this.pendingTimeouts = new Set();
+        this.monitoringStartTimeout = null;
         
         // Throttling configuration
         this.throttleDelays = new Map(); // Per-container throttle delays
@@ -716,7 +718,7 @@ class ContentUpdateManager {
         this.setContainerThrottleDelay('real-time-metrics', 500); // 0.5 seconds for real-time data
         
         // Start monitoring after a short delay to allow DOM to initialize
-        setTimeout(() => {
+        this.monitoringStartTimeout = setTimeout(() => {
             this.domSizeMonitor.startMonitoring();
         }, 5000);
     }
@@ -917,12 +919,14 @@ class ContentUpdateManager {
             console.log(`ContentUpdateManager: Successfully recreated container ${containerId}`);
             
             // Trigger data refresh after a delay
-            setTimeout(() => {
+            const refreshTimeout = setTimeout(() => {
+                this.pendingTimeouts.delete(refreshTimeout);
                 if (typeof loadDashboardData === 'function') {
                     console.log(`ContentUpdateManager: Triggering data refresh after container recreation`);
                     loadDashboardData();
                 }
             }, 2000);
+            this.pendingTimeouts.add(refreshTimeout);
             
             return true;
             
@@ -1040,15 +1044,17 @@ class ContentUpdateManager {
      */
     detectMalformedStructure(container) {
         try {
-            // Check for common malformation signs
-            const unclosedTags = container.innerHTML.match(/<[^>]+(?!>)/g);
-            const missingClosingTags = container.innerHTML.match(/<(\w+)[^>]*>(?!.*<\/\1>)/g);
-            const orphanedClosingTags = container.innerHTML.match(/<\/(\w+)>(?!.*<\1[^>]*>)/g);
-            
-            return !!(unclosedTags || missingClosingTags || orphanedClosingTags);
+            const html = container.innerHTML;
+            if (!html || !html.includes('<')) {
+                return false;
+            }
+
+            const openCount = (html.match(/</g) || []).length;
+            const closeCount = (html.match(/>/g) || []).length;
+
+            return openCount !== closeCount;
         } catch (error) {
-            // If we can't parse the HTML, consider it malformed
-            return true;
+            return false;
         }
     }
 
@@ -1068,9 +1074,12 @@ class ContentUpdateManager {
         const elementsWithDataAttrs = container.querySelectorAll('[data-chart-id], [data-update-id]');
         
         const totalElements = container.querySelectorAll('*').length;
+        if (totalElements < 20) {
+            return false;
+        }
         
-        // Consider it a memory leak sign if more than 30% of elements have these attributes
-        return (elementsWithEvents.length + elementsWithInlineStyles.length + elementsWithDataAttrs.length) > totalElements * 0.3;
+        // Consider it a memory leak sign if more than 60% of elements have these attributes
+        return (elementsWithEvents.length + elementsWithInlineStyles.length + elementsWithDataAttrs.length) > totalElements * 0.6;
     }
 
     /**
@@ -1079,6 +1088,10 @@ class ContentUpdateManager {
      * @returns {boolean} True if scroll anomalies are detected
      */
     detectScrollAnomalies(container) {
+        if (container.scrollHeight === 0 || container.clientHeight === 0) {
+            return false;
+        }
+
         // Check if scroll position is beyond content bounds
         if (container.scrollTop > container.scrollHeight - container.clientHeight + 10) {
             return true;
@@ -1182,14 +1195,19 @@ class ContentUpdateManager {
      * @param {*} data - Data to pass to the update function
      * @param {Object} options - Update options
      */
-    async updateContainer(containerId, updateFunction, data, options = {}) {
+     async updateContainer(containerId, updateFunction, data, options = {}) {
         const {
             preserveScroll = true,
             cleanupRequired = true,
             emergencyCleanupThreshold = this.domSizeLimit,
             bypassThrottle = false,
-            priority = 'normal' // 'low', 'normal', 'high', 'critical'
+            priority = 'normal', // 'low', 'normal', 'high', 'critical'
+            retryAttempts = 0,
+            retryDelay = 0,
+            allowMissingContainer = true
         } = options;
+        const suppressErrors = options.suppressErrors ?? (priority !== 'high' && priority !== 'critical');
+
 
         // Check global lock
         if (this.globalUpdateLock && priority !== 'critical') {
@@ -1197,19 +1215,31 @@ class ContentUpdateManager {
             throw new Error(`Global update lock active - ${containerId} update rejected`);
         }
 
+        const resolvedOptions = {
+            preserveScroll,
+            cleanupRequired,
+            emergencyCleanupThreshold,
+            bypassThrottle,
+            priority,
+            retryAttempts,
+            retryDelay,
+            suppressErrors,
+            allowMissingContainer
+        };
+
         // Apply throttling unless bypassed or critical priority
         if (!bypassThrottle && priority !== 'critical') {
             const throttleDelay = this.getContainerThrottleDelay(containerId);
             
             return this.updateThrottler.throttleUpdate(
                 containerId,
-                () => this.executeContainerUpdate(containerId, updateFunction, data, options),
+                () => this.executeContainerUpdate(containerId, updateFunction, data, resolvedOptions),
                 throttleDelay
             );
         }
 
         // Execute immediately for critical updates or when throttling is bypassed
-        return this.executeContainerUpdate(containerId, updateFunction, data, options);
+        return this.executeContainerUpdate(containerId, updateFunction, data, resolvedOptions);
     }
 
     /**
@@ -1225,7 +1255,11 @@ class ContentUpdateManager {
             cleanupRequired = true,
             emergencyCleanupThreshold = this.domSizeLimit,
             priority = 'normal',
-            enablePerformanceMonitoring = true
+            enablePerformanceMonitoring = true,
+            retryAttempts = 0,
+            retryDelay = 0,
+            suppressErrors = false,
+            allowMissingContainer = true
         } = options;
 
         // Acquire update lock
@@ -1244,25 +1278,49 @@ class ContentUpdateManager {
         this.updateInProgress.add(containerId);
 
         try {
-            const container = document.getElementById(containerId);
+            let container = document.getElementById(containerId);
+            if (!container && allowMissingContainer) {
+                container = document.createElement('div');
+                container.id = containerId;
+                document.body.appendChild(container);
+                console.warn(`ContentUpdateManager: Recreated missing container ${containerId} in document body`);
+            }
+
             if (!container) {
                 throw new Error(`Container ${containerId} not found`);
             }
 
-            // Use performance monitoring if available and enabled
-            if (enablePerformanceMonitoring && window.performanceMonitor) {
-                return await window.performanceMonitor.instrumentUpdate(
-                    containerId,
-                    async (updateData) => {
-                        return await this.executeUpdateWithMonitoring(containerId, updateFunction, updateData, options);
-                    },
-                    data
-                );
-            } else {
-                // Fallback to direct execution without performance monitoring
-                return await this.executeUpdateWithMonitoring(containerId, updateFunction, data, options);
+            let attempt = 0;
+            while (attempt <= retryAttempts) {
+                try {
+                    if (enablePerformanceMonitoring && window.performanceMonitor) {
+                        return await window.performanceMonitor.instrumentUpdate(
+                            containerId,
+                            async (updateData) => {
+                                return await this.executeUpdateWithMonitoring(containerId, updateFunction, updateData, options);
+                            },
+                            data
+                        );
+                    }
+
+                    // Fallback to direct execution without performance monitoring
+                    return await this.executeUpdateWithMonitoring(containerId, updateFunction, data, options);
+                } catch (error) {
+                    attempt += 1;
+                    if (attempt > retryAttempts) {
+                        if (suppressErrors) {
+                            return null;
+                        }
+                        throw error;
+                    }
+
+                    if (retryDelay > 0) {
+                        await new Promise(resolve => setTimeout(resolve, retryDelay));
+                    }
+                }
             }
 
+            return null;
         } catch (error) {
             console.error(`ContentUpdateManager: Error updating ${containerId}:`, error);
             throw error;
@@ -1286,7 +1344,8 @@ class ContentUpdateManager {
         const {
             preserveScroll = true,
             cleanupRequired = true,
-            enableRollback = this.rollbackEnabled
+            enableRollback = this.rollbackEnabled,
+            suppressErrors = false
         } = options;
 
         const container = document.getElementById(containerId);
@@ -1373,8 +1432,10 @@ class ContentUpdateManager {
                 const rollbackSuccess = await this.rollbackContainer(containerId, `Update failed: ${updateError.message}`);
                 
                 if (rollbackSuccess) {
-                    // Rollback successful, return early
-                    return null;
+                    if (suppressErrors) {
+                        return null;
+                    }
+                    throw updateError;
                 } else {
                     // Rollback failed, log additional error
                     this.logError('ROLLBACK_AFTER_UPDATE_FAILED', `Both update and rollback failed for ${containerId}`, {
@@ -1402,8 +1463,10 @@ class ContentUpdateManager {
                 throw updateError;
             }
 
-            // Recreation successful, return early
-            return null;
+            if (suppressErrors) {
+                return null;
+            }
+            throw updateError;
         }
 
         // If we reach here, the update was successful
@@ -1646,8 +1709,7 @@ class ContentUpdateManager {
         console.debug(`ContentUpdateManager: Processing queued ${nextUpdate.options.priority || 'normal'} update for ${containerId}`);
         
         try {
-            // Process with bypass throttle to avoid double-throttling
-            await this.updateContainer(
+            await this.executeContainerUpdate(
                 containerId, 
                 nextUpdate.updateFunction, 
                 nextUpdate.data, 
@@ -1767,12 +1829,12 @@ class ContentUpdateManager {
                         throw new Error(`Coordination timeout after ${elapsed}ms`);
                     }
 
-                    await this.updateContainer(
-                        update.containerId,
-                        update.updateFunction,
-                        update.data,
-                        { ...update.options, priority, coordinationId }
-                    );
+                        await this.updateContainer(
+                            update.containerId,
+                            update.updateFunction,
+                            update.data,
+                            { ...update.options, priority, coordinationId, bypassThrottle: true }
+                        );
                 }
             } else {
                 // Execute updates in parallel with concurrency limit
@@ -1792,7 +1854,7 @@ class ContentUpdateManager {
                             update.containerId,
                             update.updateFunction,
                             update.data,
-                            { ...update.options, priority, coordinationId }
+                            { ...update.options, priority, coordinationId, bypassThrottle: true }
                         )
                     );
 
@@ -1832,6 +1894,16 @@ class ContentUpdateManager {
         this.updateLocks.clear();
         this.scrollPreserver.clearAll();
         this.domSizeMonitor.stopMonitoring();
+
+        if (this.monitoringStartTimeout) {
+            clearTimeout(this.monitoringStartTimeout);
+            this.monitoringStartTimeout = null;
+        }
+
+        for (const timeoutId of this.pendingTimeouts) {
+            clearTimeout(timeoutId);
+        }
+        this.pendingTimeouts.clear();
         
         // Set global lock
         this.setGlobalUpdateLock(true, 'Emergency stop activated');

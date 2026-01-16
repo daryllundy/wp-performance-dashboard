@@ -58,6 +58,34 @@
                 </div>
             </div>
             <div class="health-card">
+                <div class="health-icon">🖥️</div>
+                <div class="health-content">
+                    <div class="health-value" id="health-cpu-usage">0%</div>
+                    <div class="health-label">CPU Usage</div>
+                </div>
+            </div>
+            <div class="health-card">
+                <div class="health-icon">🧠</div>
+                <div class="health-content">
+                    <div class="health-value" id="health-memory-usage">0MB</div>
+                    <div class="health-label">Memory Usage</div>
+                </div>
+            </div>
+            <div class="health-card">
+                <div class="health-icon">💾</div>
+                <div class="health-content">
+                    <div class="health-value" id="health-disk-usage">0%</div>
+                    <div class="health-label">Disk Usage</div>
+                </div>
+            </div>
+            <div class="health-card">
+                <div class="health-icon">🧮</div>
+                <div class="health-content">
+                    <div class="health-value" id="health-cache-hit">0%</div>
+                    <div class="health-label">Cache Hit Ratio</div>
+                </div>
+            </div>
+            <div class="health-card">
                 <div class="health-icon">🔌</div>
                 <div class="health-content">
                     <div class="health-value" id="health-active-plugins">0</div>
@@ -147,29 +175,7 @@
                 <div class="card-header">
                     <h2>💡 Recommendations</h2>
                 </div>
-                <div id="recommendations" class="scrollable-content">
-                    <div class="recommendation warning">
-                        <div class="recommendation-icon">⚠️</div>
-                        <div class="recommendation-content">
-                            <strong>Query Optimization:</strong>
-                            <p>Several slow queries detected in wp_posts table. Consider adding indexes or optimizing WHERE clauses.</p>
-                        </div>
-                    </div>
-                    <div class="recommendation info">
-                        <div class="recommendation-icon">ℹ️</div>
-                        <div class="recommendation-content">
-                            <strong>Plugin Review:</strong>
-                            <p>High-impact plugins detected. Review plugin necessity and consider alternatives.</p>
-                        </div>
-                    </div>
-                    <div class="recommendation success">
-                        <div class="recommendation-icon">✅</div>
-                        <div class="recommendation-content">
-                            <strong>Caching:</strong>
-                            <p>Object caching is recommended for better performance. Consider Redis or Memcached.</p>
-                        </div>
-                    </div>
-                </div>
+                <div id="recommendations" class="scrollable-content"></div>
             </div>
         </div>
     </div>

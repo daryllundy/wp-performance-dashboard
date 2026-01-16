@@ -102,6 +102,21 @@ function getDbPool(req) {
   return useDemo && demoPool ? demoPool : pool;
 }
 
+function getTimeRangeInterval(timeRange) {
+  switch (timeRange) {
+    case '1h':
+      return '1 HOUR';
+    case '6h':
+      return '6 HOUR';
+    case '24h':
+      return '24 HOUR';
+    case '7d':
+      return '7 DAY';
+    default:
+      return null;
+  }
+}
+
 // API Routes
 app.get('/api/metrics', async (req, res) => {
   try {
@@ -120,9 +135,13 @@ app.get('/api/metrics', async (req, res) => {
         return res.status(400).json({ error: 'Database not available' });
       }
 
-      const [rows] = await dbPool.execute(
-        `SELECT * FROM performance_metrics ORDER BY timestamp DESC LIMIT ${parseInt(limit)}`
-      );
+      const interval = getTimeRangeInterval(timeRange);
+      const limitValue = parseInt(limit);
+      const query = interval
+        ? `SELECT * FROM performance_metrics WHERE timestamp > DATE_SUB(NOW(), INTERVAL ${interval}) ORDER BY timestamp DESC LIMIT ?`
+        : 'SELECT * FROM performance_metrics ORDER BY timestamp DESC LIMIT ?';
+
+      const [rows] = await dbPool.execute(query, [limitValue]);
       res.json(rows);
     }
   } catch (error) {
@@ -134,11 +153,12 @@ app.get('/api/metrics', async (req, res) => {
 app.get('/api/slow-queries', async (req, res) => {
   try {
     const limit = req.query.limit || 20;
+    const timeRange = req.query.timeRange || '1h';
     const useDemo = req.query.demo === 'true' || isDemoMode;
 
     if (useExternalWP && !useDemo) {
       // Use WordPress API for external WordPress
-      const data = await fetchFromWPApi(`/wp-json/wp-performance-dashboard/v1/slow-queries?limit=${limit}`);
+      const data = await fetchFromWPApi(`/wp-json/wp-performance-dashboard/v1/slow-queries?limit=${limit}&timeRange=${timeRange}`);
       res.json(data);
     } else {
       // Use direct database query for local setup or demo
@@ -147,10 +167,13 @@ app.get('/api/slow-queries', async (req, res) => {
         return res.status(400).json({ error: 'Database not available' });
       }
 
-      const [rows] = await dbPool.execute(
-        'SELECT * FROM slow_queries ORDER BY execution_time DESC LIMIT ?',
-        [parseInt(limit)]
-      );
+      const interval = getTimeRangeInterval(timeRange);
+      const limitValue = parseInt(limit);
+      const query = interval
+        ? 'SELECT * FROM slow_queries WHERE timestamp > DATE_SUB(NOW(), INTERVAL ' + interval + ') ORDER BY execution_time DESC LIMIT ?'
+        : 'SELECT * FROM slow_queries ORDER BY execution_time DESC LIMIT ?';
+
+      const [rows] = await dbPool.execute(query, [limitValue]);
       res.json(rows);
     }
   } catch (error) {
@@ -161,11 +184,13 @@ app.get('/api/slow-queries', async (req, res) => {
 
 app.get('/api/admin-ajax', async (req, res) => {
   try {
+    const timeRange = req.query.timeRange || '1h';
+    const limit = req.query.limit || 20;
     const useDemo = req.query.demo === 'true' || isDemoMode;
 
     if (useExternalWP && !useDemo) {
       // Use WordPress API for external WordPress
-      const data = await fetchFromWPApi('/wp-json/wp-performance-dashboard/v1/admin-ajax');
+      const data = await fetchFromWPApi(`/wp-json/wp-performance-dashboard/v1/admin-ajax?timeRange=${timeRange}&limit=${limit}`);
       res.json(data);
     } else {
       // Use direct database query for local setup or demo
@@ -174,9 +199,13 @@ app.get('/api/admin-ajax', async (req, res) => {
         return res.status(400).json({ error: 'Database not available' });
       }
 
-      const [rows] = await dbPool.execute(
-        'SELECT * FROM admin_ajax_calls ORDER BY call_count DESC LIMIT 20'
-      );
+      const interval = getTimeRangeInterval(timeRange);
+      const limitValue = parseInt(limit);
+      const query = interval
+        ? 'SELECT * FROM admin_ajax_calls WHERE timestamp > DATE_SUB(NOW(), INTERVAL ' + interval + ') ORDER BY call_count DESC LIMIT ?'
+        : 'SELECT * FROM admin_ajax_calls ORDER BY call_count DESC LIMIT ?';
+
+      const [rows] = await dbPool.execute(query, [limitValue]);
       res.json(rows);
     }
   } catch (error) {
@@ -187,11 +216,14 @@ app.get('/api/admin-ajax', async (req, res) => {
 
 app.get('/api/plugins', async (req, res) => {
   try {
+    const timeRange = req.query.timeRange || '1h';
+    const limit = req.query.limit || 100;
+    const includeInactive = req.query.includeInactive === 'true';
     const useDemo = req.query.demo === 'true' || isDemoMode;
 
     if (useExternalWP && !useDemo) {
       // Use WordPress API for external WordPress
-      const data = await fetchFromWPApi('/wp-json/wp-performance-dashboard/v1/plugins');
+      const data = await fetchFromWPApi(`/wp-json/wp-performance-dashboard/v1/plugins?timeRange=${timeRange}&limit=${limit}&includeInactive=${includeInactive}`);
       res.json(data);
     } else {
       // Use direct database query for local setup or demo
@@ -200,9 +232,15 @@ app.get('/api/plugins', async (req, res) => {
         return res.status(400).json({ error: 'Database not available' });
       }
 
-      const [rows] = await dbPool.execute(
-        'SELECT * FROM plugin_performance ORDER BY impact_score DESC'
-      );
+      const interval = getTimeRangeInterval(timeRange);
+      const limitValue = parseInt(limit);
+      const statusClause = includeInactive ? '' : 'status = "active"';
+      const timeClause = interval ? 'timestamp > DATE_SUB(NOW(), INTERVAL ' + interval + ')' : '';
+      const whereClauses = [statusClause, timeClause].filter(Boolean).join(' AND ');
+      const whereSql = whereClauses ? `WHERE ${whereClauses}` : '';
+      const query = `SELECT * FROM plugin_performance ${whereSql} ORDER BY impact_score DESC LIMIT ?`;
+
+      const [rows] = await dbPool.execute(query, [limitValue]);
       res.json(rows);
     }
   } catch (error) {
@@ -241,11 +279,12 @@ app.get('/api/realtime-metrics', async (req, res) => {
 // System health endpoint
 app.get('/api/system-health', async (req, res) => {
   try {
+    const timeRange = req.query.timeRange || '1h';
     const useDemo = req.query.demo === 'true' || isDemoMode;
 
     if (useExternalWP && !useDemo) {
       // Use WordPress API for external WordPress
-      const data = await fetchFromWPApi('/wp-json/wp-performance-dashboard/v1/system-health');
+      const data = await fetchFromWPApi(`/wp-json/wp-performance-dashboard/v1/system-health?timeRange=${timeRange}`);
       res.json(data);
     } else {
       // Use direct database query for local setup or demo
@@ -254,15 +293,44 @@ app.get('/api/system-health', async (req, res) => {
         return res.status(400).json({ error: 'Database not available' });
       }
 
-      const [queryCount] = await dbPool.execute('SELECT COUNT(*) as total FROM slow_queries WHERE timestamp > DATE_SUB(NOW(), INTERVAL 1 HOUR)');
-      const [pluginCount] = await dbPool.execute('SELECT COUNT(*) as total FROM plugin_performance WHERE status = "active"');
-      const [avgResponse] = await dbPool.execute('SELECT AVG(avg_response_time) as avg FROM performance_metrics WHERE timestamp > DATE_SUB(NOW(), INTERVAL 1 HOUR)');
+      const interval = getTimeRangeInterval(timeRange) || '1 HOUR';
+      const [queryCount] = await dbPool.execute(
+        'SELECT COUNT(*) as total FROM slow_queries WHERE timestamp > DATE_SUB(NOW(), INTERVAL ' + interval + ')'
+      );
+      const [pluginCount] = await dbPool.execute(
+        'SELECT COUNT(*) as total FROM plugin_performance WHERE status = "active"'
+      );
+      const [avgResponse] = await dbPool.execute(
+        'SELECT AVG(avg_response_time) as avg FROM performance_metrics WHERE timestamp > DATE_SUB(NOW(), INTERVAL ' + interval + ')'
+      );
+      const [systemHealth] = await dbPool.execute(
+        'SELECT * FROM system_health ORDER BY timestamp DESC LIMIT 1'
+      );
+
+      const latestHealth = systemHealth[0] || {};
+      const avgResponseTime = avgResponse[0].avg || 0;
+      const cpuUsage = latestHealth.cpu_usage || 0;
+      const memoryTotal = latestHealth.memory_total || 0;
+      const memoryUsed = latestHealth.memory_used || 0;
+      const diskUsage = latestHealth.disk_usage || 0;
+      const cacheHitRatio = latestHealth.cache_hit_ratio || 0;
+
+      const status = avgResponseTime > 2000 || cpuUsage > 80 || memoryUsed > 0.8 * memoryTotal
+        ? 'warning'
+        : 'healthy';
 
       res.json({
         slow_queries_1h: queryCount[0].total,
         active_plugins: pluginCount[0].total,
-        avg_response_time: avgResponse[0].avg || 0,
-        status: 'healthy',
+        avg_response_time: avgResponseTime,
+        cpu_usage: cpuUsage,
+        memory_total: memoryTotal,
+        memory_used: memoryUsed,
+        memory_usage_percent: memoryTotal ? (memoryUsed / memoryTotal) * 100 : 0,
+        disk_usage: diskUsage,
+        cache_hit_ratio: cacheHitRatio,
+        active_connections: latestHealth.active_connections || 0,
+        status,
         demo_mode: useDemo
       });
     }
