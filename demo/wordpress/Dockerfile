@@ -7,7 +7,7 @@ RUN curl -O https://raw.githubusercontent.com/wp-cli/wp-cli/v2.8.1/phar/wp-cli.p
 
 # Install additional tools
 RUN apt-get update && apt-get install -y \
-    mysql-client \
+    default-mysql-client \
     curl \
     && rm -rf /var/lib/apt/lists/*
 

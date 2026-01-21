@@ -1,69 +1,57 @@
 #!/bin/bash
 
 # WordPress Demo Environment Initialization Script
-# This script sets up the WordPress demo environment with proper configuration
-
-set -e
+# This script wraps the official WordPress entrypoint and adds demo setup
 
 echo "Starting WordPress demo environment initialization..."
 
 # Wait for MySQL to be ready
 echo "Waiting for MySQL to be ready..."
-while ! mysqladmin ping -h"$WORDPRESS_DB_HOST" -u"$WORDPRESS_DB_USER" -p"$WORDPRESS_DB_PASSWORD" --silent; do
+while ! mysqladmin ping -h"${WORDPRESS_DB_HOST%:*}" -u"$WORDPRESS_DB_USER" -p"$WORDPRESS_DB_PASSWORD" --skip-ssl-verify-server-cert --silent 2>/dev/null; do
     echo "Waiting for MySQL connection..."
     sleep 2
 done
-
 echo "MySQL is ready!"
 
-# Ensure mu-plugins directory exists
-mkdir -p /var/www/html/wp-content/mu-plugins
+# Run background initialization after WordPress starts
+(
+    # Wait for WordPress files to be set up by the official entrypoint
+    sleep 10
 
-# Copy demo initialization script to mu-plugins
-if [ -f "/tmp/init-demo-content.php" ]; then
-    cp /tmp/init-demo-content.php /var/www/html/wp-content/mu-plugins/
-    echo "Demo content initializer installed as must-use plugin"
-fi
+    echo "Setting up demo environment..."
 
-# Set proper permissions
-chown -R www-data:www-data /var/www/html/wp-content
-chmod -R 755 /var/www/html/wp-content
+    # Ensure directories exist and copy demo files
+    if [ -d "/var/www/html/wp-content" ]; then
+        mkdir -p /var/www/html/wp-content/mu-plugins 2>/dev/null || true
+        if [ -f "/tmp/init-demo-content.php" ]; then
+            cp /tmp/init-demo-content.php /var/www/html/wp-content/mu-plugins/ 2>/dev/null || true
+        fi
+        chown -R www-data:www-data /var/www/html/wp-content 2>/dev/null || true
+    fi
 
-# Install WordPress if not already installed
-if ! wp core is-installed --allow-root --path=/var/www/html 2>/dev/null; then
-    echo "Installing WordPress..."
-    
-    wp core install \
-        --allow-root \
-        --path=/var/www/html \
-        --url="http://localhost:8090" \
-        --title="WordPress Performance Dashboard Demo" \
-        --admin_user="demo_admin" \
-        --admin_password="demo_password" \
-        --admin_email="admin@demo.local" \
-        --skip-email
-    
-    echo "WordPress installed successfully"
-else
-    echo "WordPress is already installed"
-fi
+    # Wait a bit more for WordPress to fully initialize
+    sleep 5
 
-# Activate demo plugins
-echo "Activating demo plugins..."
-wp plugin activate performance-simulator --allow-root --path=/var/www/html || echo "Performance simulator plugin not found or already active"
+    # Install WordPress if not already installed
+    if ! wp core is-installed --allow-root --path=/var/www/html 2>/dev/null; then
+        echo "Installing WordPress..."
+        wp core install \
+            --allow-root \
+            --path=/var/www/html \
+            --url="http://localhost:8090" \
+            --title="WordPress Performance Dashboard Demo" \
+            --admin_user="admin" \
+            --admin_password="demo_password" \
+            --admin_email="admin@demo.local" \
+            --skip-email 2>/dev/null || true
+    fi
 
-# Set demo theme
-echo "Setting up demo theme..."
-wp theme activate twentytwentyfour --allow-root --path=/var/www/html || echo "Theme activation failed or already active"
+    # Activate demo plugins and theme
+    wp plugin activate performance-simulator --allow-root --path=/var/www/html 2>/dev/null || true
+    wp theme activate twentytwentyfour --allow-root --path=/var/www/html 2>/dev/null || true
 
-# Configure WordPress settings for demo
-echo "Configuring WordPress settings..."
-wp option update blogname "WordPress Performance Dashboard Demo" --allow-root --path=/var/www/html
-wp option update blogdescription "Demonstrating WordPress performance monitoring capabilities" --allow-root --path=/var/www/html
-wp option update posts_per_page 10 --allow-root --path=/var/www/html
-wp option update default_comment_status "open" --allow-root --path=/var/www/html
-
-echo "WordPress demo environment initialization completed!"
+    echo "Demo environment setup completed!"
+) &
 
 # Execute the original WordPress entrypoint
-exec "$@"
+exec docker-entrypoint.sh "$@"

@@ -3,7 +3,7 @@ FROM node:18-alpine
 WORKDIR /app
 
 # Install curl for health checks and mysql client for database operations
-RUN apk add --no-cache curl mysql-client
+RUN apk add --no-cache curl mariadb-client
 
 # Copy package files
 COPY package*.json ./

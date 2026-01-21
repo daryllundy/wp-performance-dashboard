@@ -32,6 +32,7 @@ Thumbs.db
 *.swo
 *~
 .history
+.claude/settings.local.json
 
 # Testing & Coverage
 .pytest_cache/
