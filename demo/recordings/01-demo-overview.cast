@@ -1,0 +1,13 @@
+{"version":3,"term":{"cols":80,"rows":24,"type":"xterm-256color"},"timestamp":1769021584,"idle_time_limit":2.0,"command":"echo \"# WordPress Performance Dashboard - Demo Overview\" && echo \"\" && sleep 1 && ./demo/manage-demo.sh overview","title":"Demo Overview","env":{"SHELL":"/opt/homebrew/bin/bash"}}
+[0.003, "o", "# WordPress Performance Dashboard - Demo Overview\r\n\r\n"]
+[1.194, "o", "\u001b[0;36m=== Demo Environment Overview ===\u001b[0m\r\n\u001b[0;36m[INFO]\u001b[0m Available Commands:\r\n  setup     - Initial setup and validation\r\n  start     - Start demo environment\r\n  stop      - Stop demo services\r\n  restart   - Restart demo environment\r\n"]
+[0.001, "o", "  status    - Check service status and health\r\n  reset     - Reset environment to clean state\r\n  cleanup   - Clean up resources\r\n  logs      - View service logs\r\n  validate  - Validate demo setup\r\n\r\n\u001b[0;36m[INFO]\u001b[0m Demo Environment Components:\r\n"]
+[0.000, "o", "  • MySQL Database (port 3307)\r\n  • WordPress Application\r\n  • Nginx Reverse Proxy (port 8090)\r\n"]
+[0.000, "o", "  • Performance Dashboard (port 3001, optional)\r\n"]
+[0.000, "o", "  • Demo Data Generator\r\n\r\n"]
+[0.000, "o", "\u001b[0;36m[INFO]\u001b[0m Quick Start:\r\n"]
+[0.000, "o", "  1. ./demo/manage-demo.sh setup              # Initial setup\r\n"]
+[0.000, "o", "  2. ./demo/manage-demo.sh start              # Start WordPress demo\r\n"]
+[0.000, "o", "  3. ./demo/manage-demo.sh start --dashboard  # Start with dashboard\r\n"]
+[0.000, "o", "  4. ./demo/manage-demo.sh status             # Check everything is working\r\n\r\n"]
+[0.000, "x", "0"]

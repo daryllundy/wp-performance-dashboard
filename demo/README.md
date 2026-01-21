@@ -4,6 +4,9 @@ This directory contains a comprehensive demo WordPress environment specifically 
 
 ## Quick Start Guide
 
+**Quick Start Walkthrough:**
+![Quick Start Walkthrough](../docs/06-quick-start.gif)
+
 ### Option 1: Simple Demo Setup
 ```bash
 # Start the demo environment (WordPress + MySQL + Nginx)
@@ -33,6 +36,9 @@ This directory contains a comprehensive demo WordPress environment specifically 
 ./demo/manage-demo.sh start       # Start demo environment
 ./demo/manage-demo.sh status      # Check service health
 ```
+
+**Management Overview:**
+![Management Overview](../docs/01-demo-overview.gif)
 
 ## Services
 
@@ -264,6 +270,9 @@ docker info
 docker stats
 ```
 
+**Status Check:**
+![Status Check](../docs/04-demo-status.gif)
+
 #### Reset Options
 ```bash
 # Soft reset (restart services)
@@ -275,6 +284,9 @@ docker stats
 # Complete cleanup (remove everything)
 ./demo/cleanup-demo.sh all --force
 ```
+
+**Reset Demo:**
+![Reset Demo](../docs/05-demo-reset.gif)
 
 #### Log Locations
 - **Nginx Logs**: `demo/nginx/logs/`
@@ -429,3 +441,6 @@ The demo database includes all performance monitoring tables:
 # Clean up resources
 ./demo/cleanup-demo.sh [containers|volumes|images|all] [--force]
 ```
+
+**Validation:**
+![Validation](../docs/02-demo-validation.gif)
