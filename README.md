@@ -21,9 +21,6 @@ Access:
 - Dashboard: http://localhost:3001
 - MySQL: localhost:3307 (demo_user/demo_password)
 
-**Demo setup recording (800x500):**
-![Demo setup recording](docs/03-demo-startup.gif)
-
 Full demo docs: `demo/README.md`
 
 ## Local Run (Node)
