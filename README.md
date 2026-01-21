@@ -40,7 +40,7 @@ Dashboard: http://localhost:3000
 - Full stack: `docker-compose -f docker-compose.full.yml up -d`
 - Dashboard-only: `docker-compose -f docker-compose.dashboard.yml up -d`
 
-See `DOCKER-SETUP.md` for details.
+See [Docker Setup Guide](docs/docker-setup.md) for details.
 
 ## API (Quick Look)
 - `GET /api/metrics`
@@ -55,7 +55,19 @@ npm test
 npm run test:docker
 ```
 
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [Docker Setup](docs/docker-setup.md) | Docker configuration and deployment |
+| [Demo Integration](docs/demo-integration.md) | How the demo environment integrates |
+| [Error Recovery](docs/error-recovery-mechanisms.md) | Error handling and recovery systems |
+| [Demo Quick Start](docs/demo/quick-start.md) | Get the demo running in minutes |
+| [Demo Data Structure](docs/demo/data-structure.md) | Demo data schema and content |
+| [Demo Scripts](docs/demo/scripts.md) | Management script documentation |
+| [Demo Troubleshooting](docs/demo/troubleshooting.md) | Common issues and solutions |
+
 ## Project Links
-- Docs: `docs/`
-- Demo: `demo/README.md`
-- License: `LICENSE`
+- Demo Environment: [demo/README.md](demo/README.md)
+- Task Tracking: [docs/todo.md](docs/todo.md)
+- License: MIT

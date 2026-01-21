@@ -147,8 +147,8 @@ mysql -h localhost -P 3307 -u demo_user -pdemo_password demo_wordpress
 - **Detailed Status**: `./demo/status-demo.sh --detailed`
 - **Validate Setup**: `./demo/validate-demo-setup.sh`
 - **View Logs**: `./demo/start-demo.sh logs [service-name]`
-- **Complete Guide**: See [demo/README.md](README.md)
-- **Troubleshooting**: See [demo/TROUBLESHOOTING.md](TROUBLESHOOTING.md)
+- **Complete Guide**: See [demo/README.md](../../demo/README.md)
+- **Troubleshooting**: See [Troubleshooting Guide](troubleshooting.md)
 
 ## Next Steps
 
