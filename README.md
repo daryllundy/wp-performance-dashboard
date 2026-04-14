@@ -37,7 +37,7 @@ Dashboard: http://localhost:3000
 Required local configuration:
 - Set `DB_HOST`, `DB_USER`, `DB_PASSWORD`, and `DB_NAME` for direct DB mode
 - Or set `WP_API_URL` and optional `WP_API_USERNAME` / `WP_API_PASSWORD` for external WordPress mode
-- Set `ADMIN_TOKEN` to use `POST /api/demo-refresh`
+- Set `ADMIN_TOKEN` to use `POST /api/demo-refresh` when the app is running in demo mode
 
 **App start recording (800x500):**
 ![App start recording](docs/app-start.gif)
@@ -53,9 +53,9 @@ See [Docker Setup Guide](docs/docker-setup.md) for details.
 - `GET /api/metrics`
 - `GET /api/slow-queries`
 - `GET /api/system-health`
-- `POST /api/demo-refresh` with `x-admin-token`
+- `POST /api/demo-refresh` with `x-admin-token` when `DEMO_MODE=true`
 
-Full API notes: `docs/`
+Architecture and runtime notes: `docs/README.md`
 
 ## Testing
 ```bash
@@ -73,7 +73,7 @@ What is covered:
 |----------|-------------|
 | [Docker Setup](docs/docker-setup.md) | Docker configuration and deployment |
 | [Demo Integration](docs/demo-integration.md) | How the demo environment integrates |
-| [Error Recovery](docs/error-recovery-mechanisms.md) | Error handling and recovery systems |
+| [Error Recovery](docs/error-recovery-mechanisms.md) | Historical notes on the older client-side recovery approach |
 | [Demo Quick Start](docs/demo/quick-start.md) | Get the demo running in minutes |
 | [Demo Data Structure](docs/demo/data-structure.md) | Demo data schema and content |
 | [Demo Scripts](docs/demo/scripts.md) | Management script documentation |
