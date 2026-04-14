@@ -6,6 +6,17 @@
     }
   }
 
+  function setStatusText(id, value, state) {
+    const element = document.getElementById(id);
+    if (!element) {
+      return;
+    }
+    element.textContent = value;
+    if (state) {
+      element.dataset.state = state;
+    }
+  }
+
   function setStatusBadge(status) {
     const statusElement = document.getElementById('health-status');
     if (!statusElement) {
@@ -209,14 +220,23 @@
   }
 
   function renderSnapshot(view, snapshot, metricKey) {
-    setText('slow-query-count', `${snapshot.slowQueries.length} queries`);
-    setText('plugin-count', `${snapshot.plugins.length} plugins`);
-    updateSystemHealth(snapshot.systemHealth);
-    renderSlowQueries(view.slowQueries, snapshot.slowQueries);
-    renderPluginPerformance(view.pluginPerformance, snapshot.plugins);
-    renderRecommendations(view.recommendations, snapshot.systemHealth, snapshot.slowQueries, snapshot.plugins);
-    updateCharts(view.charts, snapshot.metrics, snapshot.adminAjax, metricKey);
-    setText('last-updated', `Updated ${new Date(snapshot.meta.generatedAt).toLocaleTimeString()}`);
+    const slowQueries = Array.isArray(snapshot.slowQueries) ? snapshot.slowQueries : [];
+    const plugins = Array.isArray(snapshot.plugins) ? snapshot.plugins : [];
+    const metrics = Array.isArray(snapshot.metrics) ? snapshot.metrics : [];
+    const adminAjax = Array.isArray(snapshot.adminAjax) ? snapshot.adminAjax : [];
+    const systemHealth = snapshot.systemHealth || {};
+    const generatedAt = snapshot.meta && snapshot.meta.generatedAt ? snapshot.meta.generatedAt : new Date().toISOString();
+
+    setText('slow-query-count', `${slowQueries.length} queries`);
+    setText('plugin-count', `${plugins.length} plugins`);
+    setStatusText('slow-queries-state', slowQueries.length ? 'Loaded' : 'Empty', slowQueries.length ? 'success' : 'warning');
+    setStatusText('plugins-state', plugins.length ? 'Loaded' : 'Empty', plugins.length ? 'success' : 'warning');
+    updateSystemHealth(systemHealth);
+    renderSlowQueries(view.slowQueries, slowQueries);
+    renderPluginPerformance(view.pluginPerformance, plugins);
+    renderRecommendations(view.recommendations, systemHealth, slowQueries, plugins);
+    updateCharts(view.charts, metrics, adminAjax, metricKey);
+    setText('last-updated', `Updated ${new Date(generatedAt).toLocaleTimeString()}`);
   }
 
   function createView(charts) {
@@ -233,6 +253,7 @@
     createCharts,
     createView,
     renderSnapshot,
+    setStatusText,
     updateRealtimeMetrics,
     updateSystemHealth,
     renderSlowQueries,

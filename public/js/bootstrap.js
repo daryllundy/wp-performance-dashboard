@@ -10,6 +10,7 @@
     const demoStatusMs = options.demoStatusMs || 30000;
     let currentMetric = 'avg_response_time';
     let realtime = null;
+    let controlsBound = false;
 
     function selectedTimeRange() {
       const selector = document.getElementById('timeRange');
@@ -21,6 +22,7 @@
       if (dot) {
         dot.style.background = connected ? '#238636' : '#f85149';
       }
+      global.WPDashboard.setStatusText('snapshot-status', connected ? 'Realtime connected' : 'Realtime disconnected', connected ? 'success' : 'warning');
     }
 
     function setModeUi() {
@@ -54,6 +56,13 @@
         refreshButton.disabled = loading;
         refreshButton.textContent = loading ? 'Refreshing…' : 'Refresh';
       }
+      const cards = [document.getElementById('slowQueries')?.closest('.card'), document.getElementById('pluginPerformance')?.closest('.card')];
+      cards.filter(Boolean).forEach((card) => card.setAttribute('aria-busy', loading ? 'true' : 'false'));
+      if (loading) {
+        global.WPDashboard.setStatusText('snapshot-status', 'Loading snapshot…', 'loading');
+        global.WPDashboard.setStatusText('slow-queries-state', 'Loading', 'loading');
+        global.WPDashboard.setStatusText('plugins-state', 'Loading', 'loading');
+      }
     }
 
     function showMessage(message, type = 'info') {
@@ -62,6 +71,17 @@
         return;
       }
       region.textContent = `${type}: ${message}`;
+      const alert = document.getElementById('dashboard-alert');
+      if (!alert) {
+        return;
+      }
+      if (type === 'error') {
+        alert.hidden = false;
+        alert.textContent = message;
+      } else {
+        alert.hidden = true;
+        alert.textContent = '';
+      }
     }
 
     async function loadSnapshot() {
@@ -83,8 +103,12 @@
         });
         global.WPDashboard.renderSnapshot(view, snapshot, currentMetric);
         state.lastUpdatedAt = snapshot.meta.generatedAt;
+        global.WPDashboard.setStatusText('snapshot-status', 'Snapshot current', 'success');
         showMessage(`Snapshot updated at ${new Date(snapshot.meta.generatedAt).toLocaleTimeString()}`);
       } catch (error) {
+        global.WPDashboard.setStatusText('snapshot-status', 'Snapshot stale', 'warning');
+        global.WPDashboard.setStatusText('slow-queries-state', 'Unavailable', 'warning');
+        global.WPDashboard.setStatusText('plugins-state', 'Unavailable', 'warning');
         showMessage(error.message, 'error');
       } finally {
         setLoading(false);
@@ -106,6 +130,7 @@
       const refreshButton = document.getElementById('demo-refresh');
       if (refreshButton) {
         refreshButton.disabled = true;
+        refreshButton.classList.add('loading');
       }
       try {
         await api.triggerDemoRefresh(global.DASHBOARD_ADMIN_TOKEN || '');
@@ -116,11 +141,16 @@
       } finally {
         if (refreshButton) {
           refreshButton.disabled = false;
+          refreshButton.classList.remove('loading');
         }
       }
     }
 
     function bindControls() {
+      if (controlsBound) {
+        return;
+      }
+      controlsBound = true;
       document.querySelectorAll('.metric-toggle').forEach((button) => {
         button.addEventListener('click', (event) => {
           document.querySelectorAll('.metric-toggle').forEach((candidate) => candidate.classList.remove('active'));

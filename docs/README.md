@@ -18,7 +18,15 @@ This folder contains all documentation for the WordPress Performance Dashboard p
 | Document | Description |
 |----------|-------------|
 | [Demo Integration](demo-integration.md) | How the demo environment integrates with the main app |
-| [Error Recovery](error-recovery-mechanisms.md) | Error handling, rollback, and recovery systems |
+| [Error Recovery](error-recovery-mechanisms.md) | Historical notes on the older client-side recovery approach |
+
+## Current Runtime Notes
+
+- The active server now runs from the root entrypoint and is organized under `src/server/`
+- Dashboard loads use the aggregated `GET /api/dashboard` snapshot endpoint
+- Realtime metrics are delivered over Socket.IO and server-side polling stays idle without connected clients
+- Browser code is split across `public/js/api.js`, `state.js`, `renderers.js`, `realtime.js`, and `bootstrap.js`
+- Automated validation includes both Jest coverage and a Playwright Chromium smoke test
 
 ## Demo Environment
 

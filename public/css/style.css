@@ -66,9 +66,55 @@ header h1 {
 .toolbar-meta {
     display: flex;
     justify-content: flex-end;
+    align-items: center;
+    gap: 12px;
     margin: -10px 0 20px;
     color: #8b949e;
     font-size: 13px;
+}
+
+.snapshot-status,
+.section-state {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid #30363d;
+    background: rgba(99, 110, 123, 0.12);
+    color: #c9d1d9;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.snapshot-status[data-state="loading"],
+.section-state[data-state="loading"] {
+    border-color: rgba(88, 166, 255, 0.4);
+    background: rgba(88, 166, 255, 0.15);
+    color: #79c0ff;
+}
+
+.snapshot-status[data-state="success"],
+.section-state[data-state="success"] {
+    border-color: rgba(63, 185, 80, 0.35);
+    background: rgba(63, 185, 80, 0.12);
+    color: #3fb950;
+}
+
+.snapshot-status[data-state="warning"],
+.section-state[data-state="warning"] {
+    border-color: rgba(249, 130, 108, 0.35);
+    background: rgba(249, 130, 108, 0.12);
+    color: #f9826c;
+}
+
+.dashboard-alert {
+    margin: 0 0 20px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    border: 1px solid rgba(249, 130, 108, 0.35);
+    background: rgba(249, 130, 108, 0.12);
+    color: #ffd8cf;
 }
 
 .status-indicator {
@@ -253,6 +299,12 @@ header h1 {
     box-shadow: 0 4px 8px rgba(35, 134, 54, 0.4);
 }
 
+.refresh-btn:disabled {
+    opacity: 0.7;
+    cursor: wait;
+    transform: none;
+}
+
 /* Health Overview */
 .health-overview {
     display: grid;
@@ -272,6 +324,11 @@ header h1 {
     transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
+}
+
+.card[aria-busy="true"] {
+    border-color: rgba(88, 166, 255, 0.4);
+    box-shadow: 0 0 0 1px rgba(88, 166, 255, 0.2);
 }
 
 #health-status[data-status="healthy"] {
@@ -338,6 +395,25 @@ header h1 {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
     gap: 24px;
+}
+
+@media (max-width: 920px) {
+    header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 18px;
+    }
+
+    .header-left,
+    .header-right,
+    .toolbar-meta {
+        flex-wrap: wrap;
+        justify-content: flex-start;
+    }
+
+    .grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 .card {

@@ -19,14 +19,18 @@ function setupDom() {
       <button id="refreshBtn"></button>
       <div id="demo-status"></div>
       <div id="environment-label"></div>
+      <div id="dashboard-alert" hidden></div>
       <div id="live-region"></div>
       <div id="last-updated"></div>
+      <div id="snapshot-status"></div>
       <select id="timeRange"><option value="1h" selected>Last 1 Hour</option></select>
       <div id="slowQueries" style="height:100px; overflow:auto"></div>
       <div id="pluginPerformance" style="height:100px; overflow:auto"></div>
       <div id="recommendations"></div>
       <div id="slow-query-count"></div>
+      <div id="slow-queries-state"></div>
       <div id="plugin-count"></div>
+      <div id="plugins-state"></div>
       <div id="health-slow-queries"></div>
       <div id="health-avg-response"></div>
       <div id="health-cpu-usage"></div>
@@ -140,5 +144,45 @@ describe('dashboard lifecycle', () => {
     app.stop();
     jest.advanceTimersByTime(5000);
     expect(global.fetch.mock.calls.length).toBe(callCountAfterStart);
+  });
+
+  test('failed refresh keeps existing content and exposes non-blocking error state', async () => {
+    const snapshot = {
+      metrics: [{ timestamp: '2026-01-01T00:00:00.000Z', avg_response_time: 150, queries_per_second: 12, memory_usage: 64 }],
+      slowQueries: [{ query_text: 'SELECT 1', execution_time: 101, rows_examined: 10, source_file: 'wp-db.php' }],
+      adminAjax: [{ action_name: 'heartbeat', call_count: 4 }],
+      plugins: [{ plugin_name: 'Plugin 1', impact_score: 12, memory_usage: 10, query_count: 2, load_time: 40 }],
+      systemHealth: { slow_queries_1h: 1, avg_response_time: 150, cpu_usage: 20, memory_used: 128, memory_total: 512, disk_usage: 40, cache_hit_ratio: 90, active_plugins: 8, status: 'healthy' },
+      meta: { generatedAt: '2026-01-01T00:00:00.000Z', demo: false }
+    };
+
+    let dashboardCallCount = 0;
+    global.fetch.mockImplementation(async (url) => {
+      if (url === '/api/demo-status') {
+        return { ok: true, json: async () => ({ available: true }) };
+      }
+      if (String(url).startsWith('/api/dashboard')) {
+        dashboardCallCount += 1;
+        if (dashboardCallCount === 1) {
+          return { ok: true, json: async () => snapshot };
+        }
+        return { ok: false, json: async () => ({ error: 'Snapshot unavailable' }) };
+      }
+      throw new Error(`Unexpected URL: ${url}`);
+    });
+
+    const app = window.WPDashboard.createDashboardApp({ refreshMs: 30000, demoStatusMs: 30000 });
+    app.start();
+    await app.refreshDemoStatus();
+    await app.loadSnapshot();
+    expect(document.getElementById('slowQueries').children.length).toBe(1);
+
+    await app.loadSnapshot();
+
+    expect(document.getElementById('slowQueries').children.length).toBe(1);
+    expect(document.getElementById('dashboard-alert').hidden).toBe(false);
+    expect(document.getElementById('dashboard-alert').textContent).toContain('Snapshot unavailable');
+    expect(document.getElementById('snapshot-status').dataset.state).toBe('warning');
+    app.stop();
   });
 });

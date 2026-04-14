@@ -3,10 +3,12 @@
 Real-time WordPress performance monitoring dashboard for database, plugin, and system metrics, styled like Grafana/Netdata.
 
 ## Highlights
+- Consolidated secure Express server with validated API inputs
+- Aggregated snapshot API for dashboard loads plus websocket realtime updates
 - Live metrics for response time, QPS, and memory
 - Slow query and plugin impact analysis
 - Admin-Ajax monitoring and recommendations
-- REST API + WebSocket updates
+- Modular browser runtime with explicit lifecycle start/stop behavior
 - Docker-ready demo environment
 
 ## Demo (Recommended)
@@ -58,7 +60,12 @@ Full API notes: `docs/`
 ## Testing
 ```bash
 npm test
+npm run test:browser
 ```
+
+What is covered:
+- `npm test`: server validation/auth/concurrency behavior and dashboard lifecycle rendering
+- `npm run test:browser`: Chromium smoke test for real dashboard load, mode toggle, time-range change, and manual refresh
 
 ## Documentation
 
