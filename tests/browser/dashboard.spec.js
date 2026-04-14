@@ -37,6 +37,9 @@ test('dashboard renders and refreshes in a real browser', async ({ page }) => {
   await expect(page.locator('#slowQueries .query-item')).toHaveCount(2);
   await expect(page.locator('#pluginPerformance .plugin-item')).toHaveCount(2);
   await expect(page.locator('#last-updated')).toContainText('Updated');
+  await expect(page.locator('.chart-shell')).toHaveCount(2);
+
+  const initialDocumentHeight = await page.evaluate(() => document.documentElement.scrollHeight);
 
   await page.getByRole('button', { name: 'Switch to Demo' }).click();
   await expect(page.locator('#environment-label')).toHaveText('Environment: Demo');
@@ -46,4 +49,7 @@ test('dashboard renders and refreshes in a real browser', async ({ page }) => {
 
   await page.getByRole('button', { name: 'Refresh' }).click();
   await expect(page.locator('#live-region')).toContainText('Snapshot updated');
+
+  const refreshedDocumentHeight = await page.evaluate(() => document.documentElement.scrollHeight);
+  expect(refreshedDocumentHeight).toBe(initialDocumentHeight);
 });
