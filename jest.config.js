@@ -1,17 +1,10 @@
 module.exports = {
   testEnvironment: 'node',
   testMatch: [
-    '<rootDir>/tests/**/*.test.js'
+    '<rootDir>/tests/server/**/*.test.js',
+    '<rootDir>/tests/client/**/*.test.js'
   ],
-  collectCoverageFrom: [
-    'src/**/*.js',
-    'scripts/**/*.js',
-    '!**/node_modules/**',
-    '!**/tests/**'
-  ],
-  testTimeout: 300000, // 5 minutes for Docker tests
-  setupFilesAfterEnv: [],
+  testTimeout: 30000,
   verbose: true,
-  forceExit: true, // Exit after tests complete (important for Docker tests)
   detectOpenHandles: true
 };

@@ -10,7 +10,8 @@
     "start": "node server.js",
     "seed:sample-data": "node scripts/generate-demo-data.js",
     "test": "jest",
-    "test:docker": "jest --testPathPatterns=docker"
+    "test:docker": "jest --testPathPatterns=docker",
+    "test:browser": "playwright test"
   },
   "dependencies": {
     "cors": "^2.8.5",
@@ -22,6 +23,7 @@
     "socket.io": "^4.7.2"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "jest": "^30.0.5",
     "jsdom": "^26.1.0",
     "supertest": "^7.1.4",
