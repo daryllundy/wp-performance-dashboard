@@ -63,6 +63,8 @@ npm test
 npm run test:browser
 ```
 
+If Playwright browsers are not installed yet, run `npx playwright install chromium` once before `npm run test:browser`.
+
 What is covered:
 - `npm test`: server validation/auth/concurrency behavior and dashboard lifecycle rendering
 - `npm run test:browser`: Chromium smoke test for real dashboard load, mode toggle, time-range change, and manual refresh
