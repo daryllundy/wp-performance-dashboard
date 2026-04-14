@@ -18,6 +18,9 @@
                     <span class="dot" id="connection-status"></span>
                     <span>Real-time Monitoring</span>
                 </div>
+                <div class="status-indicator">
+                    <span id="environment-label">Environment: Live</span>
+                </div>
                 <div class="demo-indicator" id="demo-indicator" style="display: none;">
                     <span class="demo-badge">🎭 DEMO MODE</span>
                     <span class="demo-status" id="demo-status">Checking...</span>
@@ -40,6 +43,10 @@
                 <button id="refreshBtn" class="refresh-btn">↻ Refresh</button>
             </div>
         </header>
+        <div class="toolbar-meta">
+            <span id="last-updated">Updated just now</span>
+        </div>
+        <div id="live-region" class="sr-only" aria-live="polite"></div>
 
         <!-- System Health Overview -->
         <div class="health-overview">
@@ -108,7 +115,7 @@
                 <div class="card-header">
                     <h2>📈 Performance Metrics</h2>
                     <div class="card-controls">
-                        <button class="metric-toggle active" data-metric="response_time">Response Time</button>
+                        <button class="metric-toggle active" data-metric="avg_response_time">Response Time</button>
                         <button class="metric-toggle" data-metric="memory_usage">Memory Usage</button>
                         <button class="metric-toggle" data-metric="queries_per_second">Queries/sec</button>
                     </div>
@@ -182,6 +189,11 @@
 
     <script src="js/content-management.js"></script>
     <script src="js/performance-monitor.js"></script>
+    <script src="js/state.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/renderers.js"></script>
+    <script src="js/realtime.js"></script>
+    <script src="js/bootstrap.js"></script>
     <script src="js/dashboard.js"></script>
 </body>
 </html>

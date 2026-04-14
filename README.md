@@ -27,11 +27,15 @@ Full demo docs: `demo/README.md`
 ```bash
 npm install
 cp .env.dashboard.example .env
-npm run seed:sample-data
 npm start
 ```
 
 Dashboard: http://localhost:3000
+
+Required local configuration:
+- Set `DB_HOST`, `DB_USER`, `DB_PASSWORD`, and `DB_NAME` for direct DB mode
+- Or set `WP_API_URL` and optional `WP_API_USERNAME` / `WP_API_PASSWORD` for external WordPress mode
+- Set `ADMIN_TOKEN` to use `POST /api/demo-refresh`
 
 **App start recording (800x500):**
 ![App start recording](docs/app-start.gif)
@@ -43,16 +47,17 @@ Dashboard: http://localhost:3000
 See [Docker Setup Guide](docs/docker-setup.md) for details.
 
 ## API (Quick Look)
+- `GET /api/dashboard`
 - `GET /api/metrics`
 - `GET /api/slow-queries`
 - `GET /api/system-health`
+- `POST /api/demo-refresh` with `x-admin-token`
 
 Full API notes: `docs/`
 
 ## Testing
 ```bash
 npm test
-npm run test:docker
 ```
 
 ## Documentation
