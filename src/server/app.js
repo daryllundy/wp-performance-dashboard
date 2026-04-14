@@ -105,7 +105,20 @@ function createApp(options = {}) {
   });
   const pools = options.pools || createPools(config);
 
-  app.use(helmet());
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", 'https://cdn.jsdelivr.net'],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:'],
+        connectSrc: ["'self'", 'ws:', 'wss:'],
+        fontSrc: ["'self'", 'data:'],
+        objectSrc: ["'none'"],
+        upgradeInsecureRequests: null
+      }
+    }
+  }));
   app.use(createCorsMiddleware(config));
   app.use(express.json({ limit: config.jsonLimit }));
   app.use(express.static(path.join(__dirname, '../../public')));
